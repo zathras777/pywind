@@ -32,9 +32,10 @@ def do_search(month, year):
         print "No certificates returned."
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Get details of a station by accreditation number')
-#    parser.add_argument('accreditation', action='store', help='Accreditation number to search for')
+    parser = argparse.ArgumentParser(description='Get Ofgem certificates for a given month & year')
+    parser.add_argument('month', type=int, action='store', help='Month')
+    parser.add_argument('year', type=int, action='store', help='Year')
 
     args = parser.parse_args()
 
-    do_search(9, 2012)
+    do_search(args.month, args.year)
