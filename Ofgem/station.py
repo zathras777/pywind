@@ -18,52 +18,55 @@
 __author__ = 'david reid'
 __version__ = '0.1'
 
+from datetime import datetime
+
 from .base import OfgemBase
+from .utils import parse_csv_line
 
 class OfgemStationData(OfgemBase):
 
     START_URL = 'ReportViewer.aspx?ReportPath=/Renewables/Accreditation/AccreditedStationsExternalPublic&ReportVisibility=1&ReportCategory=1'
     SCHEMES = {'RO': 1, 'REGO': 2}
+    field_names = {
+        'scheme': 3,
+        'country': 5,
+        'commission year': 7,
+        'accreditation year': 9,
+        'commission month': 11,
+        'accreditation year': 13,
+        'capacity': 15,
+        'accreditation status': 17,
+        'contract type': 19,
+        'technology group': 21,
+        'organisation': 23,
+        'organisation search': 25,
+        'generating station': 27,
+        'station search': 29,
+        'accreditation search': 31
+    }
+    fields = {
+        3:  {'type': 'select', 'options': SCHEMES}, # scheme
+        5:  {'type': 'multi'},                # country
+        7:  {'type': 'select', 'all': True},  # commission year
+        9:  {'type': 'select', 'all': True},  # accreditation year
+        11: {'type': 'select', 'all': True},  # commission month
+        13: {'type': 'select', 'all': True},  # accreditation month
+        15: {'type': 'select', 'all': True},  # capacity
+        17: {'type': 'multi', 'all': True},   # accreditation status
+        19: {'type': 'select', 'all': True},  # contract type
+        21: {'type': 'multi', 'all': True},   # technology group
+        23: {'type': 'select', 'all': True},  # organisation
+        25: {'type': 'text', 'null': True},   # organisation search
+        27: {'type': 'select', 'all': True},  # generating station
+        29: {'type': 'text', 'null': True},   # station Search
+        31: {'type': 'text', 'null': True},   # accreditation Search
+    }
 
     def __init__(self, scheme = 'RO'):
         OfgemBase.__init__(self)
         self.stations = []
         self.scheme = self.SCHEMES[scheme]
 
-        self.field_names = {
-            'scheme': 3,
-            'country': 5,
-            'commission year': 7,
-            'accreditation year': 9,
-            'commission month': 11,
-            'accreditation year': 13,
-            'capacity': 15,
-            'accreditation status': 17,
-            'contract type': 19,
-            'technology group': 21,
-            'organisation': 23,
-            'organisation search': 25,
-            'generating station': 27,
-            'station search': 29,
-            'accreditation search': 31
-        }
-        self.fields = {
-            3:  {'type': 'select', 'options': self.SCHEMES}, # scheme
-            5:  {'type': 'multi'},                # country
-            7:  {'type': 'select', 'all': True},  # commission year
-            9:  {'type': 'select', 'all': True},  # accreditation year
-            11: {'type': 'select', 'all': True},  # commission month
-            13: {'type': 'select', 'all': True},  # accreditation month
-            15: {'type': 'select', 'all': True},  # capacity
-            17: {'type': 'multi', 'all': True},   # accreditation status
-            19: {'type': 'select', 'all': True},  # contract type
-            21: {'type': 'multi', 'all': True},   # technology group
-            23: {'type': 'select', 'all': True},  # organisation
-            25: {'type': 'text', 'null': True},   # organisation search
-            27: {'type': 'select', 'all': True},  # generating station
-            29: {'type': 'text', 'null': True},   # station Search
-            31: {'type': 'text', 'null': True},   # accreditation Search
-        }
         self.options = {
             3: self.scheme,
             5: [1,2,3,4],
