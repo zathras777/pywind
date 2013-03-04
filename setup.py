@@ -8,5 +8,5 @@ setup(name='pywind',
       author='David Reid',
       author_email='zathrasorama@gmail.com',
       url='http://www.variablepitch.co.uk/pywind/',
-      packages=['pywind', 'pywind.bmreports','pywind.ofgem'],
+      packages=['pywind','pywind.ofgem','pywind.bmreports'],
      )
