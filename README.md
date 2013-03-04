@@ -23,8 +23,10 @@ the UK and can be accessed via the bmreports module.
 
 To get the data,
 
-from pywind import bmreports
-gd = bmreports.GenerationData()
+```
+>>> from pywind.bmreports import *
+>>> gd = GenerationData()
+```
 
 This will create a GenerationData object that will contain summary generation
 data covering the previous
@@ -66,6 +68,7 @@ be used to search the Ofgem database.
 
 e.g. Searching for stations with Novar in their name
 
+```
 >>> from pywind.ofgem import *
 >>> ss = StationSearch()
 >>> ss.station = 'Novar'
@@ -89,10 +92,11 @@ True
     Owner address                 : Novar Estate OfficeEvantonRoss-shireScotland,IV16 9XL
     Fax                           :
     Address                       : SRO Glenglass Hydro Limited,Glenglass Hydro LtdRiver Glass (Allt Graad),Novar,IV16 9XL,Scotland
-
+```
 
 e.g. Getting all certificates issued to Off-Shore wind farms during Jan 2012
 
+```
 >>> from pywind.ofgem import *
 >>> cs = CertificateSearch()
 >>> cs.set_month(1)
@@ -121,7 +125,7 @@ True
     Status_dt                     : 2012-04-18 00:00:00
     Current_holder                : Vattenfall Energy Trading GmbH
     Reg_no                        : HRB 80335
-
+```
 
 More information about the information available can be found at
 http://www.ofgem.gov.uk/Pages/OfgemHome.aspx

@@ -16,8 +16,6 @@
 # limitations under the License.
 #
 #
-__author__ = 'david reid'
-__version__ = "1.0.1"
 
 import urllib
 import urllib2
