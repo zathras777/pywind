@@ -1,5 +1,6 @@
 #! /usr/bin/env python
-#
+# coding=utf-8
+
 # Copyright 2013 david reid <zathrasorama@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,12 +56,12 @@ class FuelRecord(object):
     def as_dict(self):
         return {'code': self.type, 'name': self.FUELS[self.type],
                  'value': self.val, 'percent': self.pct}
-                 
+
 class GenerationPeriod(object):
     DT1 = "%Y-%m-%d %H:%M:%S"
     DT2 = "%Y-%m-%d %H:%M"
     NAMES = {'INST': 'instant', 'HH': 'halfhour', 'LAST24H': '24hours'}
-    
+
     def __init__(self, el):
         self.tag = el.tag
         self.total = int(el.get("TOTAL"))
@@ -69,7 +70,7 @@ class GenerationPeriod(object):
         self.data = []
         for f in el.getchildren():
             self.data.append(FuelRecord(f))
-                    
+
     def INST(self, el):
         ''' Store the time for an instant record.
         '''
@@ -92,7 +93,7 @@ class GenerationPeriod(object):
         self.finish = datetime.strptime(dd+' '+hh[6:], self.DT2) + timedelta(1)
 
     def keyname(self):  return self.NAMES[self.tag]
-        
+
     def as_dict(self):
         rv = {'total': self.total, 'data': [f.as_dict() for f in self.data]}
         if self.tag == 'INST':
@@ -101,7 +102,7 @@ class GenerationPeriod(object):
             rv['start'] = self.start
             rv['finish'] = self.finish
         return rv
-        
+
 class GenerationData(object):
     URL = "http://www.bmreports.com/bsp/additional/soapfunctions.php"
     PARAMS = {'element': 'generationbyfueltypetable'}
@@ -110,7 +111,7 @@ class GenerationData(object):
         self.sections = []
         self.xml = None
         self.get_data()
-        
+
     def get_data(self):
         '''Get data from the BM Reports website. Try 3 times.
         '''
@@ -125,19 +126,9 @@ class GenerationData(object):
             self.xml = etree.parse(resp).getroot()
             for section in ['INST','HH','LAST24H']:
                 self.sections.append(GenerationPeriod(self.xml.xpath(section)[0]))
-            
+
 
     def as_dict(self):
         ''' Return the data as a dict object.
         '''
         return {s.keyname(): s.as_dict() for s in self.sections}
-
-if __name__ == '__main__':        
-    gt = GenerationData()
-    data = gt.as_dict()
-    print "Instant Data"
-    print data['instant']
-    print "Last 24 Hours"
-    print data['24hours']
-    
-    
