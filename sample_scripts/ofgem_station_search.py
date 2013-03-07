@@ -28,7 +28,7 @@ if __name__ == '__main__':
                         help='Scheme to search (ignored for accreditation) default REGO')
     args = parser.parse_args()
 
-    osd = StationSearch.StationSearch(args.scheme)
+    osd = StationSearch(args.scheme)
     crit = "Searching for Ofgem Stations: scheme %s" % args.scheme
 
     if args.name:

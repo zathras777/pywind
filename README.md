@@ -131,3 +131,21 @@ More information about the information available can be found at
 http://www.ofgem.gov.uk/Pages/OfgemHome.aspx
 
 Sample scripts are included to search for certificates and stations.
+
+ROC Prices
+----------
+
+These are obtained from the eROC auction site using the EROCPrices() class
+within the roc module. The prices for the various periods listed are then
+available by using the object as a dict.
+
+```
+>>> from pywind.roc import *
+>>> er = EROCPrices()
+>>> er[200701]
+46.17
+```
+
+The format for the period is simply yyyymm where yyyy is the 4 digit year and mm
+is the 2 digit month. If there is more than one auction in a given period the
+average of the results is calculated.
