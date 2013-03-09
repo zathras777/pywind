@@ -41,7 +41,7 @@ class CertificateSearch(Base):
 
     START_URL = 'ReportViewer.aspx?ReportPath=/DatawarehouseReports/CertificatesExternalPublicDataWarehouse&ReportVisibility=1&ReportCategory=2'
 
-    SCHEME_LIST = {'REGO': 1, 'RO': 2}
+    SCHEMES = {'REGO': 1, 'RO': 2}
 
     COUNTRY_LIST = {'Austria': 1,
                     'Denmark': 2,
@@ -124,13 +124,13 @@ class CertificateSearch(Base):
         11: {'name': 'country', 'type': 'multi', 'all': True},
         13: {'name': 'agent_station', 'type': 'select', 'default': 1 },
         15: {'name': 'all_generators', 'type': 'bool', 'default': True},
-        17: {'name': 'station', 'type': 'multi', 'null': True},
+        17: {'name': 'station', 'type': 'text', 'null': True},
         19: {'name': 'start_year', 'type': 'select', 'default': 0},
         21: {'name': 'finish_year', 'type': 'select', 'default': 0},
         23: {'name': 'start_month', 'type': 'select', 'default': 0},
         25: {'name': 'finish_month', 'type': 'select', 'default': 0},
         27: {'name': 'output_type', 'type': 'multi', 'all': True},
-        29: {'name': 'accreditation_no', 'type': 'text', 'null': True},
+        29: {'name': 'accreditation', 'type': 'text', 'null': True},
         31: {'name': 'status', 'type': 'multi', 'all': True},
         33: {'name': 'certificate_no', 'type': 'text', 'null': True},
         35: {'name': 'all_organisations', 'type': 'bool', 'default': True},

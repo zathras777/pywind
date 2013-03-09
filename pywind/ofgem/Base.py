@@ -54,9 +54,8 @@ class Base(object):
         self.opener = urllib2.build_opener(cookie_handler, httpsHandler)
 
     def set_scheme(self, scheme):
-        SCHEMES = {'RO': 1, 'REGO': 2}
         try:
-            self['scheme'] = SCHEMES[scheme.upper()]
+            self['scheme'] = self.SCHEMES[scheme.upper()]
         except KeyError:
             raise BaseError("Invalid scheme specified - %s" % scheme.upper())
 
@@ -173,7 +172,7 @@ class Base(object):
                 # simple text field
                 if options is None:
                     if v.get('null', False):
-                        self.post_data[nm + '$ctl01'] = 'on'
+                        self.post_data[nm + '$ctl03$ctl01'] = 'on'
                 else:
                     self.post_data[nm + '$ctl00'] = options
             elif typ == 'select':
@@ -187,18 +186,18 @@ class Base(object):
             elif typ == 'bool':
                 if options is None:
                     options = v.get('default', False)
-                self.post_data[nm + '$ctl01'] = 'on' if options else 'off'
+                self.post_data[nm + '$ReportViewer_ctl00_ctl%02d' % k] = 'ctl00' if options else 'ctl01'
             elif typ == 'radio':
                 key = nm + "$ReportViewer_ctl00_ctl%02d" % k
                 if options is None:
                     options = v.get('default', True)
                 self.post_data[key] = "ctl00" if options else "ctl01"
 
-    def _get_field(self, fld):
+    def _get_field(self, fld, exp):
         for n,f in self.FIELDS.iteritems():
             if f.get('name', None) == fld.lower().replace(' ','_'):
                 return self.options[n]
-        return None
+        return exp
 
     def _set_field(self, fld, value):
         for n,f in self.FIELDS.iteritems():
@@ -208,10 +207,10 @@ class Base(object):
         return False
 
     def __getitem__(self, item):
-        return self._get_field(item)
+        return self._get_field(item, IndexError)
 
     def __getattr__(self, item):
-        return self._get_field(item)
+        return self._get_field(item, AttributeError)
 
     def __setitem__(self, key, value):
         if not self._set_field(key, value):

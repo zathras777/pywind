@@ -21,6 +21,7 @@ from pywind.ofgem.Station import Station
 from .utils import parse_csv_line
 
 class StationSearch(Base):
+    SCHEMES = {'RO': 1, 'REGO': 2}
 
     START_URL = 'ReportViewer.aspx?ReportPath=/Renewables/Accreditation/AccreditedStationsExternalPublic&ReportVisibility=1&ReportCategory=1'
 

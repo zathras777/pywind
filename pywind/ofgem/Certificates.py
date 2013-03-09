@@ -82,7 +82,6 @@ class Certificates(object):
         """
         if len(line_data) < 20 or 'No rows found' in line_data[5]:
             return
-
         self.data = line_data[5:]
         # numbers...
         self.data[2] = float(self.data[2])
@@ -96,20 +95,20 @@ class Certificates(object):
             dt = datetime.strptime(self.data[7][:10], '%d/%m/%Y')
             self.data[7] = dt.strftime("%b-%Y")
 
-    def _get_field(self, fld):
+    def _get_field(self, fld, exp):
         if fld.lower() in self.FIELDS:
             idx = self.FIELDS.index(fld.lower())
-            if idx < len(self.data):
+            if self.data is not None and idx < len(self.data):
                 if isinstance(self.data[idx], basestring):
                     return self.data[idx].strip()
                 return self.data[idx]
-        return None
+        raise exp
 
     def __getitem__(self, key):
-        return self._get_field(key)
+        return self._get_field(key, IndexError)
 
     def __getattr__(self, item):
-        return self._get_field(item)
+        return self._get_field(item, AttributeError)
 
     def as_string(self):
         s = '\n'
