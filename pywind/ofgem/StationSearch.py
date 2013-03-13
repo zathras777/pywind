@@ -61,3 +61,6 @@ class StationSearch(Base):
             st = Station(line)
             if st.is_valid:
                 self.results.append(st)
+
+    def for_wind(self):
+        self.options[21] = [22, 23, 31, 32]

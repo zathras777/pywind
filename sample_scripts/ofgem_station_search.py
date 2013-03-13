@@ -26,6 +26,8 @@ if __name__ == '__main__':
     parser.add_argument('--accreditation', action='store', help='Accreditation number to search for')
     parser.add_argument('--scheme', action='store', default='REGO',
                         help='Scheme to search (ignored for accreditation) default REGO')
+    parser.add_argument('--organisation', action='store', help='Organisation to search for')
+
     args = parser.parse_args()
 
     osd = StationSearch(args.scheme)
@@ -34,6 +36,10 @@ if __name__ == '__main__':
     if args.name:
         osd['station'] = args.name
         crit += ", name = '%s'" % args.name
+
+    if args.organisation:
+        osd['organisation'] = args.organisation
+        crit += ", organisation = '%s'" % args.organisation
 
     if args.accreditation:
         osd.options[31] = args.accreditation.upper()
