@@ -98,7 +98,7 @@ class CertificateRange(object):
         """
         if self.date is None:
             return ''
-        return self.date.strftime('%y%m%d') + (self.owner or 'ZZZZZZZZZZ')
+        return self.date.strftime('%y%m%d') + '%s' % (self.owner or 'ZZZZZZZZZZ')
 
 
 class CertificateTree(object):
