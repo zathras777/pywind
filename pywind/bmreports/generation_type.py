@@ -21,6 +21,8 @@ import urllib
 import urllib2
 from lxml import etree
 from datetime import datetime, timedelta
+from lxml.etree import XMLSyntaxError
+
 
 class FuelRecord(object):
     FUELS = {'CCGT': 'Combined Cycle Gas Turbine',
@@ -36,13 +38,13 @@ class FuelRecord(object):
              'INTIRL': 'Import from Ireland',
              'INTNED': 'Import from the Netherlands',
              'INTEW': 'East/West Interconnector'
-            }
+    }
 
     def __init__(self, el):
-        '''Object to represent a single fuel record entry. These
-           will have the format:
-             <FUEL TYPE="OTHER" IC="N" VAL="13528" PCT="1.6"/>
-        '''
+        """ Object to represent a single fuel record entry. These
+            will have the format:
+              <FUEL TYPE="OTHER" IC="N" VAL="13528" PCT="1.6"/>
+        """
         self.type = el.get("TYPE")
         self.ic = el.get("IC")
         self.val = el.get("VAL")
@@ -53,7 +55,8 @@ class FuelRecord(object):
 
     def as_dict(self):
         return {'code': self.type, 'name': self.FUELS[self.type],
-                 'value': self.val, 'percent': self.pct}
+                'value': self.val, 'percent': self.pct}
+
 
 class GenerationPeriod(object):
     DT1 = "%Y-%m-%d %H:%M:%S"
@@ -70,27 +73,31 @@ class GenerationPeriod(object):
             self.data.append(FuelRecord(f))
 
     def INST(self, el):
-        ''' Store the time for an instant record.
-        '''
+        """ Store the time for an instant record.
+            :param el: the element to parse
+        """
         self.dt = datetime.strptime(el.get("AT"), self.DT1)
 
     def HH(self, el):
-        ''' Store the start and finish times for a half hour record.
-        '''
+        """ Store the start and finish times for a half hour record.
+            :param el: the element to parse
+        """
         dd = el.get("SD")
         hh = el.get("AT")
-        self.start = datetime.strptime(dd+' '+hh[:5], self.DT2)
-        self.finish = datetime.strptime(dd+' '+hh[6:], self.DT2)
+        self.start = datetime.strptime(dd + ' ' + hh[:5], self.DT2)
+        self.finish = datetime.strptime(dd + ' ' + hh[6:], self.DT2)
 
     def LAST24H(self, el):
-        ''' Store the start and finish date/time records for a 24 hour record.
-        '''
+        """ Store the start and finish date/time records for a 24 hour record.
+            :param el: the element to parse
+        """
         dd = el.get("FROM_SD")
         hh = el.get("AT")
-        self.start = datetime.strptime(dd+' '+hh[:5], self.DT2)
-        self.finish = datetime.strptime(dd+' '+hh[6:], self.DT2) + timedelta(1)
+        self.start = datetime.strptime(dd + ' ' + hh[:5], self.DT2)
+        self.finish = datetime.strptime(dd + ' ' + hh[6:], self.DT2) + timedelta(1)
 
-    def keyname(self):  return self.NAMES[self.tag]
+    def keyname(self):
+        return self.NAMES[self.tag]
 
     def as_dict(self):
         rv = {'total': self.total, 'data': [f.as_dict() for f in self.data]}
@@ -100,6 +107,7 @@ class GenerationPeriod(object):
             rv['start'] = self.start
             rv['finish'] = self.finish
         return rv
+
 
 class GenerationData(object):
     URL = "http://www.bmreports.com/bsp/additional/soapfunctions.php"
@@ -111,22 +119,25 @@ class GenerationData(object):
         self.get_data()
 
     def get_data(self):
-        '''Get data from the BM Reports website. Try 3 times.
-        '''
+        """ Get data from the BM Reports website. Try 3 times.
+        """
         url = self.URL + '?' + urllib.urlencode(self.PARAMS)
         resp = None
-        for attempt  in range(0, 3):
+        for attempt in range(0, 3):
             try:
                 resp = urllib2.urlopen(url)
             except:
                 pass
+
         if resp is not None and resp.code == 200:
-            self.xml = etree.parse(resp).getroot()
-            for section in ['INST','HH','LAST24H']:
+            try:
+                self.xml = etree.parse(resp).getroot()
+            except XMLSyntaxError:
+                return
+            for section in ['INST', 'HH', 'LAST24H']:
                 self.sections.append(GenerationPeriod(self.xml.xpath(section)[0]))
 
-
     def as_dict(self):
-        ''' Return the data as a dict object.
-        '''
+        """ Return the data as a dict object.
+        """
         return {s.keyname(): s.as_dict() for s in self.sections}
