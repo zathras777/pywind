@@ -4,7 +4,7 @@ from distutils.core import setup
 
 setup(
     name='pywind',
-    version='0.4.0',
+    version='0.5.0',
     description='Python Modules to access online information relating to wind energy in the UK',
     author='David Reid',
     author_email='zathrasorama@gmail.com',

@@ -149,3 +149,56 @@ available by using the object as a dict.
 The format for the period is simply yyyymm where yyyy is the 4 digit year and mm
 is the 2 digit month. If there is more than one auction in a given period the
 average of the results is calculated.
+
+Electricity Prices
+------------------
+
+To get the System Sell Price (SSP) and the System Buy Price (SBP) for a given date
+the bmreports.SystemPrices class can be used.
+
+```
+>>> from pywind.bmreports import SystemPrices
+>>> s = SystemPrices()
+>>> s.get_data()
+True
+>>> s.prices
+[{'sbp': '67.57225', 'period': '1', 'ssp': '48.90000'},
+ {'sbp': '66.00000', 'period': '2', 'ssp': '49.70000'},
+ {'sbp': '53.24000', 'period': '3', 'ssp': '40.50000'},
+ {'sbp': '67.22574', 'period': '4', 'ssp': '53.53000'},
+ {'sbp': '62.22428', 'period': '5', 'ssp': '53.36000'},
+ {'sbp': '62.90939', 'period': '6', 'ssp': '53.12000'},
+ {'sbp': '62.81903', 'period': '7', 'ssp': '50.68000'},
+ {'sbp': '62.78963', 'period': '8', 'ssp': '51.10000'},
+ {'sbp': '60.12207', 'period': '9', 'ssp': '50.98000'},
+ {'sbp': '55.00000', 'period': '10', 'ssp': '50.63000'},
+ {'sbp': '59.61707', 'period': '11', 'ssp': '51.40000'},
+ {'sbp': '63.71989', 'period': '12', 'ssp': '51.80000'},
+  ...
+]
+```
+
+Derived Unit Data
+-----------------
+The pywind.bmreports.UnitData class allows the BMReports reports to be accessed.
+Presently this class defaults to querying the Derived Data to extract information
+on Constraint Payments made.
+
+```
+>>> from pywind.bmreports import UnitData
+>>> ud = UnitData()
+>>> ud.get_data()
+True
+>>> ud.data
+[{'lead': 'RWE NPOWER PLC', 'ngc': 'ABTH8',
+  'cash': {'bid': '-1023.3200'},
+  'volumes': {'tagged': '-57.3751', 'original': '-57.3750'}, 'type': 'T', 'id': 'T_ABTH8'},
+ {'lead': 'RWE NPOWER PLC', 'ngc': 'ABTH9',
+  'cash': {'bid': '-594.5200'},
+  'volumes': {'tagged': '-60.0000', 'original': '-60.0000'}, 'type': 'T', 'id': 'T_ABTH9'},
+ {'lead': 'Jade Power Generation Ltd', 'ngc': 'COTPS-1',
+  'cash': {'bid': '-802.6000'},
+  'volumes': {'originalpriced': '-25.0000', 'original': '-25.0000'}, 'type': 'T', 'id': 'T_COTPS-1'},
+...
+]
+```
