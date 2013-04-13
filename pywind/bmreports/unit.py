@@ -17,12 +17,15 @@
 from datetime import timedelta, date
 from lxml import etree
 import urllib
+from lxml.etree import XMLSyntaxError
 
 from pywind.bmreports.utils import _geturl, xpath_gettext
 
 
 class UnitData(object):
-
+    """ Class that gets data about Balancing Mechanism Units
+        from the Balancing Mechanism website.
+    """
     HOST = 'http://www.bmreports.com'
     TYPES = {'Physical': '/servlet/com.logica.neta.bwp_PanBMDataServlet',
              'Dynamic': '/servlet/com.logica.neta.bwp_PanDynamicServlet',
@@ -51,9 +54,10 @@ class UnitData(object):
         self.unittype = kwargs.get('unittype', '')
         self.leadparty = kwargs.get('leadparty', '')
         self.ngcunitname = kwargs.get('ngcunitname', '')
-        self.set_type(kwargs.get('type', 'Derived'))
         self.historic = kwargs.get('historic', True)
         self.latest = kwargs.get('latest', False)
+
+        self.set_type(kwargs.get('type', 'Derived'))
 
     def set_type(self, typ):
         ''' Will throw an error if an invalid type is used... '''
@@ -90,7 +94,7 @@ class UnitData(object):
 
     def _process(self, req):
         """ Process the XML returned from the request. This will contain a
-            series of BMU elements
+            series of BMU elements, e.g.
 
             <BMU ID="T_WBUPS-4"
                  TYPE="T"
@@ -125,32 +129,36 @@ class UnitData(object):
               </CASHFLOW>
             </BMU>
 
-            The original bid values for volume and total bid values for
-            cashflow are currently recorded together with the information
-            about the station.
+            Each units record shows the details of Bids & Offers made
+            during the settlement period. The actual accepted volumes
+            should be shown in the ORIGINAL elements.
+            Units can have both Bid & Offer results in the same Settlement Period.
         """
-        root = etree.parse(req)
-        DATA_DICT = {'bid': 'VOLUME//BID_VALUES//ORIGINAL//TOTAL',
-                     'cash': 'CASHFLOW//BID_VALUES//TOTAL',
-        }
+        try:
+            root = etree.parse(req)
+        except XMLSyntaxError:
+            return False
+
+        ELEMENTS = [
+            ['VOLUME//BID_VALUES//ORIGINAL//TOTAL', 'bid', 'volume'],
+            ['VOLUME//OFFER_VALUES//ORIGINAL//TOTAL', 'offer', 'volume'],
+            ['CASHFLOW//BID_VALUES//TOTAL', 'bid', 'cashflow'],
+            ['CASHFLOW//OFFER_VALUES//TOTAL', 'offer', 'cashflow']
+        ]
+
         for bmu in root.xpath(".//ACCEPT_PERIOD_TOTS//*//BMU"):
 #            print etree.tostring(bmu)
             bmud = {'id': bmu.get('ID'),
                     'type': bmu.get('TYPE'),
                     'lead': bmu.get('LEAD_PARTY'),
                     'ngc': bmu.get('NGC_NAME'),
-                    'volumes': {},
-                    'cash': {}}
-            for c in ['ORIGINAL', 'TAGGED', 'REPRICED', 'ORIGINALPRICED']:
-                val = xpath_gettext(bmu, "VOLUME//BID_VALUES//%s//TOTAL" % c, 0)
+                    'bid': {},
+                    'offer': {}
+            }
+            for el in ELEMENTS:
+                val = xpath_gettext(bmu, el[0], 0)
                 if val != 0:
-                    bmud['volumes'][c.lower()] = val
-            for c in ['BID', 'OFFER']:
-                val = xpath_gettext(bmu, "CASHFLOW//%s_VALUES//TOTAL" % c, 0)
-                if val != 0:
-                    bmud['cash'][c.lower()] = val
+                    bmud[el[1]][el[2]] = val
 
-#for k, v in DATA_DICT.iteritems():
-#                bmud[k] = xpath_gettext(bmu, v, 0)
             self.data.append(bmud)
         return len(self.data) > 0

@@ -23,24 +23,35 @@
     that there will be 48 settlement periods.
 """
 import argparse
+from datetime import datetime, timedelta, date
 from pywind.bmreports import UnitData
+
+def mkdate(datestr):
+    return datetime.strptime(datestr, '%Y-%m-%d').date()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Get Constraint Payment information for yesterday')
+    parser.add_argument('--date', action='store', type=mkdate, help='Date to get results for')
+    parser.add_argument('--period', action='store', help='Period to get data for')
     args = parser.parse_args()
 
     data = {}
-    ud = UnitData()
-    for period in range(1, 49):
+    ud = UnitData({'date': args.date or date.today() - timedelta(days=2)})
+    pr = [args.period] or range(1,49)
+    for period in pr:
         ud.period = period
         if ud.get_data():
             data[period] = ud.data
+        else:
+            print "Unable to get data for %s, period %d" % (ud.date.strftime("%d %b %Y"), period)
 
-    for period, bids in sorted(data.iteritems()):
+    for period, units in sorted(data.iteritems()):
         print "Period: ", period
-        for bid in sorted(bids, key=lambda x: x['ngc']):
-            print "    ", bid['ngc'], bid['lead'], ' (', UnitData.CX_TYPE[bid['type']], ')'
-            print "        Volume: ", ', '.join(["%s: %s" % (k, v) for k, v in bid['volumes'].iteritems()])
-            print "        Cash:   ", ', '.join(["%s: %s" % (k, v) for k, v in bid['cash'].iteritems()])
+        for unit in sorted(units, key=lambda x: x['ngc']):
+            print "  ", unit['ngc'], unit['lead']
+            if unit['bid'].has_key('volume'):
+                print "      BID:   ", unit['bid']['volume']+'MWh  ', unit['bid']['cashflow']
+            if unit['offer'].has_key('volume'):
+                print "      OFFER: ", unit['offer']['volume']+'MWh  ', unit['offer']['cashflow']
 
 
