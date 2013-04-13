@@ -190,15 +190,42 @@ on Constraint Payments made.
 >>> ud.get_data()
 True
 >>> ud.data
-[{'lead': 'RWE NPOWER PLC', 'ngc': 'ABTH8',
-  'cash': {'bid': '-1023.3200'},
-  'volumes': {'tagged': '-57.3751', 'original': '-57.3750'}, 'type': 'T', 'id': 'T_ABTH8'},
- {'lead': 'RWE NPOWER PLC', 'ngc': 'ABTH9',
-  'cash': {'bid': '-594.5200'},
-  'volumes': {'tagged': '-60.0000', 'original': '-60.0000'}, 'type': 'T', 'id': 'T_ABTH9'},
- {'lead': 'Jade Power Generation Ltd', 'ngc': 'COTPS-1',
-  'cash': {'bid': '-802.6000'},
-  'volumes': {'originalpriced': '-25.0000', 'original': '-25.0000'}, 'type': 'T', 'id': 'T_COTPS-1'},
+[{'lead': 'RWE NPOWER PLC',
+  'offer': {},
+  'bid': {'volume': '-45.0000', 'cashflow': '-1788.0300'},
+  'ngc': 'ABTH7',
+  'type': 'T',
+  'id': 'T_ABTH7'},
+ {'lead': 'RWE NPOWER PLC',
+  'offer': {},
+  'bid': {'volume': '-22.0000', 'cashflow': '-871.9700'},
+  'ngc': 'ABTH8',
+  'type': 'T',
+  'id': 'T_ABTH8'},
+...
+]
+```
+
+Balancing Mechanism Units
+-------------------------
+The list of units (with their fuel types) is available as an Excel spreadsheet from the BMReports
+website. The pywind.bmreports.UnitList class can be used to get and parse the current list.
+
+
+```
+>>> from pywind.bmreports import UnitList
+>>> ul = UnitList()
+>>> len(ul)
+365
+>>> ul.by_fuel_type('wind')
+[{'eff_from': datetime.date(2012, 11, 14),
+  'ngc_id': u'ACHYW-1',
+  'fuel_type': u'WIND',
+  'eff_to': datetime.date(2050, 12, 31)},
+ {'eff_from': datetime.date(2012, 11, 14),
+  'ngc_id': u'AKGLW-1',
+  'fuel_type': u'WIND',
+  'eff_to': datetime.date(2050, 12, 31)},
 ...
 ]
 ```

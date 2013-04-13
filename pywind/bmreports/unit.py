@@ -14,10 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import timedelta, date
+from datetime import timedelta, date, datetime
 from lxml import etree
+import os
+from tempfile import NamedTemporaryFile
 import urllib
+import urllib2
 from lxml.etree import XMLSyntaxError
+import xlrd
 
 from pywind.bmreports.utils import _geturl, xpath_gettext
 
@@ -162,3 +166,50 @@ class UnitData(object):
 
             self.data.append(bmud)
         return len(self.data) > 0
+
+
+class UnitList(object):
+    """ Get a list of the Balancing Mechanism Units with their
+        Fuel Type and dates.
+    """
+    XLS_URL='http://www.bmreports.com/bsp/staticdata/BMUFuelType.xls'
+    def __init__(self):
+        self.get_list()
+
+    def __len__(self):
+        return len(self.units)
+
+    def _mkdate(self, book, sheet, row, col):
+        val = sheet.cell(row, col).value
+        return datetime(*xlrd.xldate_as_tuple(val, book.datemode)).date()
+
+    def by_fuel_type(self, fuel):
+        units = []
+        for unit in self.units:
+            if unit['fuel_type'].lower() == fuel.lower():
+                units.append(unit)
+        return units
+
+    def get_list(self):
+        self.units = []
+        req = urllib2.urlopen(self.XLS_URL)
+        f = NamedTemporaryFile(delete=False)
+        with open(f.name, 'w') as fh:
+            fh.write(req.read())
+
+        wb = xlrd.open_workbook(f.name)
+        sh = wb.sheet_by_name(u'BMU Fuel Types')
+
+        for rownum in range(2, sh.nrows):
+            ud = {'ngc_id': sh.cell(rownum, 0).value,
+                  'sett_id': sh.cell(rownum, 1).value,
+                  'fuel_type': sh.cell(rownum, 2).value,
+                  'eff_from': self._mkdate(wb, sh, rownum,3),
+                  'eff_to': self._mkdate(wb, sh, rownum, 4)
+            }
+            if ud['sett_id'] == 42:
+                del(ud['sett_id'])
+
+            self.units.append(ud)
+
+        os.unlink(f.name)
