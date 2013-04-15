@@ -28,17 +28,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     ul = UnitList()
-    print "Total of %d units" % len(ul)
+    print "Total of %d units\n" % len(ul)
     for unit in ul.units:
-        if unit.has_key('sett_id'):
-            print "%-10s %-12s %-10s %s to %s" % (unit['ngc_id'],
-                                                  unit['sett_id'],
-                                                  unit['fuel_type'],
-                                                  unit['eff_from'].strftime("%d %b %Y"),
-                                                  unit['eff_to'].strftime("%d %b %Y"))
-        else:
-            print "%-10s %-12s %-10s %s to %s" % (unit['ngc_id'],
-                                                  '',
-                                                  unit['fuel_type'],
-                                                  unit['eff_from'].strftime("%d %b %Y"),
-                                                  unit['eff_to'].strftime("%d %b %Y"))
+        vals = [unit['ngc_id'], '',
+                unit['fuel_type'],
+                unit['eff_from'].strftime("%d %b %Y"),
+                unit['eff_to'].strftime("%d %b %Y")]
+        if 'sett_id' in unit:
+            vals[1] = unit['sett_id']
+        print "%-10s %-12s %-10s %s to %s" % tuple(vals)

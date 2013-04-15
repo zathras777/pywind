@@ -163,7 +163,8 @@ class UnitData(object):
                 val = xpath_gettext(bmu, el[0], 0)
                 if val != 0:
                     bmud[el[1]][el[2]] = val
-
+            if not 'volume' in bmud['bid'] and not 'volume' in bmud['offer']:
+                continue
             self.data.append(bmud)
         return len(self.data) > 0
 
@@ -200,7 +201,7 @@ class UnitList(object):
         wb = xlrd.open_workbook(f.name)
         sh = wb.sheet_by_name(u'BMU Fuel Types')
 
-        for rownum in range(2, sh.nrows):
+        for rownum in range(1, sh.nrows):
             ud = {'ngc_id': sh.cell(rownum, 0).value,
                   'sett_id': sh.cell(rownum, 1).value,
                   'fuel_type': sh.cell(rownum, 2).value,
