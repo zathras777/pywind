@@ -150,6 +150,16 @@ The format for the period is simply yyyymm where yyyy is the 4 digit year and mm
 is the 2 digit month. If there is more than one auction in a given period the
 average of the results is calculated.
 
+BM Report Data Ownership
+------------------------
+
+The data provided by the BMReports website is owned by Elexon UK and permission needs
+to be sought before reproducing it. The following functions should only be used with
+this restriction in mind as they access the site and download data.
+
+The exact restrictions on the data usage are unclear at this time.
+
+
 Electricity Prices
 ------------------
 
@@ -229,3 +239,35 @@ website. The pywind.bmreports.UnitList class can be used to get and parse the cu
 ...
 ]
 ```
+
+Power Pack Unit Data
+--------------------
+Most smaller Onshore Wind stations do not supply their output directly to the
+grid via High Voltage connections and as such are considered to be "embedded"
+stations. The impact of this on the capacity data released is discussed in some
+detail in a PDF document by James Hemingway (available at https://www.gov.uk/government/uploads/system/uploads/attachment_data/file/65923/6487-nat-grid-metering-data-et-article-sep12.pdf)
+
+To obtain a list of the wind stations that are connected to the grid via HV and as
+such have their output considered the Power Pack spreadsheet can be used. This class
+attempts to download and provide a list of it's contents.
+
+```
+>>> from pywind.bmreports import PowerPackUnits
+>>> pp = PowerPackUnits()
+>>> len(pp)
+89
+>>> pp.units
+[{'ngc_id': u'ACHYW-1',
+  'sett_id': u'',
+  'name': u'Achany',
+  'cap': 50.0,
+  'bmunit': True,
+  'date_added': None,
+  'reg_capacity': 50.0
+}, {
+  'ngc_id': u'AKGLW-1',
+...
+]
+```
+
+The date_added will be either a datetime.date object or None.

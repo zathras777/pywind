@@ -69,7 +69,7 @@ from xlwt import Alignment, XFStyle, Workbook, Worksheet
 from pywind.ofgem import CertificateSearch, StationSearch
 from pywind.ofgem.utils import get_period
 
-PERIOD_START = 5
+PERIOD_START = 6
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Download bulk information from Ofgem to produce an Excel spreadsheet')
@@ -98,52 +98,25 @@ if __name__ == '__main__':
             break
         if ',' in station:
             for s in station.strip().split(','):
-                stations.append({'name': s.strip(),'output': {}})
+                s = s.strip()
+                if s in stations:
+                    continue
+                stations.append(s)
         else:
-            stations.append({'name': station.strip(),'output': {}})
+            station = station.strip()
+            if station in stations:
+                continue
+            stations.append(station)
+
     if len(stations) == 0:
         print "No stations to process. Exiting..."
         sys.exit(0)
 
     wb = Workbook()
-    ws = wb.add_sheet('Certificate Data')
-    ws.write(4,0,"Period")
+    ws = wb.add_sheet('Certificate Data', cell_overwrite_ok=True)
+    ws.write(PERIOD_START - 1,0,"Period")
     for i in range(0, len(periods)):
         ws.write(PERIOD_START + i, 0, periods[i])
-
-    print "\nTotal of %d stations to process\n" % len(stations)
-    for s in stations:
-        print "    ", s['name']
-        ss = StationSearch()
-        ss.set_scheme(args.scheme)
-        ss.station = s['name']
-        if not ss.get_data():
-            print "Unable to find any station with a name %s" % s['name']
-            continue
-        s['accreditation'] = ss.stations[0].accreditation
-
-        cs = CertificateSearch()
-
-        cs.set_scheme(args.scheme)
-        cs.set_start_month(start_month)
-        cs.set_start_year(start_year)
-        cs.set_finish_month(end_month)
-        cs.set_finish_year(end_year)
-        cs.accreditation = s['accreditation']
-        if not cs.get_data():
-            print "Unable to get any certificate data :-("
-            continue
-        for c in cs.certificates:
-            if c['status'] in ['Revoked','Retired','Expired']:
-                continue
-            if s['output'].has_key(c.period):
-                s['output'][c.period]['certs'] += c.certs
-            else:
-                s['output'][c.period] = {'certs': c.certs,
-                                         'capacity': c.capacity,
-                                         'factor': c.factor}
-
-    print "\nComplete. Generating Excel spreadsheet %s" % args.filename
 
     al = Alignment()
     al.horz = Alignment.HORZ_CENTER
@@ -152,21 +125,87 @@ if __name__ == '__main__':
     title_style = XFStyle()
     title_style.alignment = al
 
+    print "\nTotal of %d stations to process\n" % len(stations)
     for i in range(0, len(stations)):
         s = stations[i]
-        col = 1 + 3 * i
-        ws.write(4, col, "Installed Capacity")
-        ws.write(4,col + 1, "MWh per Certificate")
-        ws.write(4,col + 2, "Certificates Issued")
-        ws.write_merge(2, 2, col, col+2, s['name'], title_style)
-        if not s.has_key('accreditation'):
-            continue
-        ws.write_merge(3, 3, col, col+2, s['accreditation'], title_style)
+        col = 1 + 5 * i
+        print "    ", s
 
-        for p, vals in s['output'].iteritems():
-            row = periods.index(p) + PERIOD_START
-            ws.write(row, col, vals['capacity'])
-            ws.write(row, col + 1, vals['factor'])
-            ws.write(row, col + 2, vals['certs'])
+        # add headers
+        ws.write(PERIOD_START - 1, col, "Installed Capacity")
+        ws.write(PERIOD_START - 1, col + 1, "RO Certificates")
+        ws.write(PERIOD_START - 1, col + 2, "RO Factor")
+        ws.write(PERIOD_START - 1, col + 3, "REGO Certificates")
+        ws.write(PERIOD_START - 1, col + 4, "REGO Factor")
 
+        capacity = {}
+        for scheme in ['RO','REGO']:
+            offset = 1 if scheme == 'RO' else 3
+            ss = StationSearch()
+            ss.for_wind()
+            ss.set_scheme(scheme)
+            ss.station = s
+            if not ss.get_data():
+                print "Unable to find any station with a name %s" % s
+                continue
+
+            station = None
+            if len(ss) > 1:
+                for st in ss.stations:
+ #                   print st.as_string()
+                    if 'wind' in st.technology.lower():
+                        station = st
+                        break
+            else:
+                station = ss.stations[0]
+
+            if station is None:
+                print "Unable to get station data for '%s'" % s
+                continue
+
+            # Write name
+            ws.write_merge(PERIOD_START - 4, PERIOD_START - 4, col, col + 4,
+                           station.name, title_style)
+            # add accreditation #
+            if scheme == 'RO':
+                ws.write_merge(PERIOD_START - 2, PERIOD_START - 2, col, col + 4,
+                               'RO: ' + station.accreditation + '  [' + station.commission_dt.strftime("%d %b %Y") + ']',
+                               title_style)
+            elif scheme == 'REGO':
+                ws.write_merge(PERIOD_START - 3, PERIOD_START - 3, col, col + 4,
+                               'REGO: ' + station.accreditation + '  [' + station.commission_dt.strftime("%d %b %Y") + ']',
+                               title_style)
+
+            cs = CertificateSearch()
+
+            cs.set_scheme(scheme)
+            cs.set_start_month(start_month)
+            cs.set_start_year(start_year)
+            cs.set_finish_month(end_month)
+            cs.set_finish_year(end_year)
+            cs.accreditation = station.accreditation
+
+            if not cs.get_data():
+                print "Unable to get any certificate data :-("
+                continue
+
+            data = {}
+            for c in cs.certificates:
+#                print c.as_string()
+                if c['status'] in ['Revoked','Retired','Expired']:
+                    continue
+
+                row = periods.index(c.period) + PERIOD_START
+                if not capacity.has_key(c.period):
+                    ws.write(row, col, c.capacity)
+                    capacity[c.period] = True
+
+                data[c.period] = data.get(c.period,0) + c.certs
+                ws.write(row, col + offset + 1, c.factor)
+
+            for p,val in data.iteritems():
+                row = periods.index(p) + PERIOD_START
+                ws.write(row, col + offset, val)
+
+    print "\nComplete. Excel spreadsheet %s" % args.filename
     wb.save(args.filename)

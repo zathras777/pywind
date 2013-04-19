@@ -25,6 +25,11 @@ import xlrd
 
 from pywind.bmreports.utils import _geturl, xpath_gettext
 
+def _mkdate(book, sheet, row, col):
+    val = sheet.cell(row, col).value
+    if val == '':
+        return None
+    return datetime(*xlrd.xldate_as_tuple(val, book.datemode)).date()
 
 class UnitData(object):
     """ Class that gets data about Balancing Mechanism Units
@@ -205,12 +210,55 @@ class UnitList(object):
             ud = {'ngc_id': sh.cell(rownum, 0).value,
                   'sett_id': sh.cell(rownum, 1).value,
                   'fuel_type': sh.cell(rownum, 2).value,
-                  'eff_from': self._mkdate(wb, sh, rownum,3),
-                  'eff_to': self._mkdate(wb, sh, rownum, 4)
+                  'eff_from': _mkdate(wb, sh, rownum,3),
+                  'eff_to': _mkdate(wb, sh, rownum, 4)
             }
             if ud['sett_id'] == 42:
                 del(ud['sett_id'])
 
+            self.units.append(ud)
+
+        os.unlink(f.name)
+
+
+class PowerPackUnits(object):
+    """ Download the latest Power Pack modules spreadsheet and make the
+        list of stations available as a list.
+    """
+    XLS_URL='http://www.bmreports.com/bsp/staticdata/PowerParkModules.xls'
+    def __init__(self):
+        self.get_list()
+
+    def __len__(self):
+        return len(self.units)
+
+    def yesno(self, val):
+        if val.lower() in ['yes','true']:
+            return True
+        return False
+
+    def get_list(self):
+        self.units = []
+        req = urllib2.urlopen(self.XLS_URL)
+        f = NamedTemporaryFile(delete=False)
+        with open(f.name, 'w') as fh:
+            fh.write(req.read())
+
+        wb = xlrd.open_workbook(f.name)
+        sh = wb.sheet_by_name(u'Sheet1')
+
+        for rownum in range(1, sh.nrows):
+            ud = {
+                'sett_id': sh.cell(rownum, 0).value,
+                'ngc_id': sh.cell(rownum, 1).value,
+                'name': sh.cell(rownum, 2).value,
+                'reg_capacity': sh.cell(rownum, 3).value,
+                'date_added': _mkdate(wb, sh, rownum, 4),
+                'bmunit': self.yesno(sh.cell(rownum, 5).value),
+                'cap': sh.cell(rownum, 6).value
+            }
+            if ud['ngc_id'] == '':
+                break
             self.units.append(ud)
 
         os.unlink(f.name)
