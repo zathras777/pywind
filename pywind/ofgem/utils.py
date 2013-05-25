@@ -35,7 +35,7 @@ def ofgem_year(yr):
     """
     if isinstance(yr, basestring):
         yr = int(yr)
-    return (2012 - yr) + 1
+    return (2015 - yr) + 1
 
 
 def get_period(pdstr):

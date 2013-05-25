@@ -15,9 +15,6 @@
 # limitations under the License.
 #
 
-__author__ = 'david reid'
-__version__ = '0.2'
-
 import re
 import urllib
 import urllib2
@@ -67,7 +64,6 @@ class Base(object):
 
         if self.debug:
             self.dump_post_data()
-
         pdata = urllib.urlencode(self.post_data)
         resp = self.opener.open(self.post_url, data = pdata)
         if resp.code != 200:
@@ -135,13 +131,14 @@ class Base(object):
         return False
 
     def _update_post_data(self):
-        ''' Each child class is expected to provide a dict giving details
+        """ Each child class is expected to provide a dict giving details
             of the fields that are required for form submission. The dict
             gives the type of field and defaults.
             The child class should also have an options dict that provides
             values to be used for the fields when making a request.
-        '''
-        self.post_data['__EVENTTARGET'] = ''
+        """
+        if not '__EVENTTARGET' in self.post_data:
+            self.post_data['__EVENTTARGET'] = ''
         self.post_data['__EVENTARGUMENT'] = ''
         self.post_data['__LASTFOCUS'] = ''
         self.post_data['ReportViewer$ctl04'] = ''
@@ -154,7 +151,7 @@ class Base(object):
             typ = v.get('type')
             fld_name = v.get('name', 'Field %d' % k)
             if typ is None:
-                raise BaseError("No type sepcified for %s" % fld_name)
+                raise BaseError("No type specified for %s" % fld_name)
 
             if typ == 'multi':
                 # multiple choice select field

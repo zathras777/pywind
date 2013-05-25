@@ -75,10 +75,11 @@ class CertificateRange(object):
         Created ranges are intended to be used with a CertificateTree
         object to determine the final allocations of certificates.
     """
-    def __init__(self, start, finish, owner, date=None):
+    def __init__(self, start, finish, owner, date=None, factor=1.000):
         self.start = start
         self.finish = finish
         self.owner = owner
+        self.factor = factor
         self.date = date
 
     def __repr__(self):

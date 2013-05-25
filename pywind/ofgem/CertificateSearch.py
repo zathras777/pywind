@@ -51,6 +51,7 @@ class CertificateSearch(Base):
                     'Switzerland': 6,
                     'Wales': 7
     }
+
     TECHNOLOGY_LIST = {
         'Aerothermal': 1,
         'Biodegradable': 2,
@@ -132,7 +133,7 @@ class CertificateSearch(Base):
         27: {'name': 'output_type', 'type': 'multi', 'all': True},
         29: {'name': 'accreditation', 'type': 'text', 'null': True},
         31: {'name': 'status', 'type': 'multi', 'all': True},
-        33: {'name': 'certificate_no', 'type': 'text', 'null': True},
+        33: {'name': 'certificate_no', 'type': 'multi', 'null': True},
         35: {'name': 'all_organisations', 'type': 'bool', 'default': True},
         37: {'name': 'current_holder_name', 'type': 'text', 'null': True}
     }
@@ -179,6 +180,13 @@ class CertificateSearch(Base):
         year, month = get_period(period)
         self.options[21] = year
         self.options[25] = month
+
+    def all_generation(self):
+        self.options[9] = range(0, len(self.GENERATOR_LIST) + 1)
+
+    def set_technology(self, techs):
+        self.options[5] = techs
+        self.post_data['__EVENTTARGET'] = "ReportViewer$ctl00$ctl05$ctl00"
 
     def parse(self):
         csvfile = StringIO(self.rawdata)

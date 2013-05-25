@@ -108,6 +108,7 @@ class Certificates(object):
         return self._get_field(key, IndexError)
 
     def __getattr__(self, item):
+        print "__getattr__(%s)" % item
         return self._get_field(item, AttributeError)
 
     def as_string(self):
@@ -118,6 +119,9 @@ class Certificates(object):
 
     def as_dict(self):
         return {self.FIELDS[n]: self.data[n] for n in range(0, len(self.FIELDS))}
+
+    def as_list(self):
+        return [self.data[n] for n in range(0, len(self.FIELDS))]
 
     def output_summary(self):
         perc = (float(self['certs']) / self['capacity']) * 100
