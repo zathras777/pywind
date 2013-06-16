@@ -17,8 +17,6 @@
 
 from datetime import datetime
 
-from .utils import parse_csv_line
-
 class Station(object):
 
     """ Class to store details of a single station using data from ofgem.
@@ -32,56 +30,64 @@ class Station(object):
 
     """
 
-    def __init__(self, line):
-        self.data = parse_csv_line(line)
-        self.is_valid = False
+    FIELDS = [
+        'accreditation', 'status', 'name', 'scheme',
+        'capacity', 'country', 'technology', 'output',
+        'accreditation_dt', 'commission_dt', 'developer',
+        'developer_address', 'address', 'fax'
+    ]
 
-        if len(self.data) >= 13:
-            self.data[4] = float(self.data[4])
-            # Amazingly enough some date fields have \n embedded in them?!
-            if '\n' in self.data[8]:
-                self.data[8] = self.data[8].split('\n')[0]
-            self.data[8] = datetime.strptime(self.data[8], '%d/%m/%Y')
-            self.data[9] = datetime.strptime(self.data[9], '%d/%m/%Y')
-            self.is_valid = True
+    def __init__(self, node):
 
-        #  0  - Accreditation No of the station
-        #  1  - Status of station
-        #  2  - Name of the station
-        #  3  - Scheme
-        #  4  - Total Installed Generating Capacity
-        #  5  - Country
-        #  6  - Technology Group
-        #  7  - Generation Type
-        #  8  - Accreditation Date
-        #  9  - Commission Date
-        #  10 - Owner
-        #  11 - Address
-        #  12 - Fax Number
-        #  13 - Station address
+        mapping = [
+            ['GeneratorID', 'accreditation'],
+            ['StatusName', 'status'],
+            ['GeneratorName', 'name'],
+            ['SchemeName', 'scheme'],
+            ['Capacity'],
+            ['Country'],
+            ['TechnologyName', 'technology'],
+            ['OutputType', 'output'],
+            ['AccreditationDate', 'accreditation_dt'],
+            ['CommissionDate', 'commission_dt'],
+            ['textbox6', 'developer'],
+            ['textbox61', 'developer_address'],
+            ['textbox65', 'address'],
+            ['FaxNumber', 'fax']
+        ]
+        for m in mapping:
+            if len(m) == 1:
+                self.set_attr_from_xml(node, m[0], m[0].lower())
+            else:
+                self.set_attr_from_xml(node, m[0], m[1])
 
-    FIELDS = ['accreditation', 'status', 'name', 'scheme', 'capacity',
-              'country', 'technology', 'generation', 'accreditation_dt',
-              'commission_dt', 'developer', 'owner_address', 'fax',
-              'address']
+        if self.capacity:
+            self.capacity = float(self.capacity)
+        self._convert_date('commission_dt')
+        self._convert_date('accreditation_dt')
+        if self.address is not None:
+            self.address = self.address.replace("\r", ", ")
+        if self.developer_address is not None:
+            self.developer_address = self.developer_address.replace("\r", ", ")
+        # catch/correct some odd results I have observed...
+        if self.technology is not None and '\n' in self.technology:
+            self.technology = self.technology.split('\n')[0]
 
-    def _get_field(self, fld):
-        if fld.lower() in self.FIELDS:
-            idx = self.FIELDS.index(fld.lower())
-            if idx < len(self.data):
-                if type(self.data[idx]) is str:
-                    return self.data[idx].strip()
-                return self.data[idx]
-        return None
 
-    def __getitem__(self, item):
-        return self._get_field(item)
+    def _convert_date(self, which):
+        dtstr = getattr(self, which)
+        if '\n' in dtstr:
+            dtstr = dtstr.split("\n")[0]
+        setattr(self, which, datetime.strptime(dtstr, '%d/%m/%Y'))
 
-    def __getattr__(self, item):
-        return self._get_field(item)
+    def set_attr_from_xml(self, node, attr, name):
+        val = node.get(attr, None)
+        if val is not None and val.isdigit():
+            val = int(val)
+        setattr(self, name, val)
 
     def as_string(self):
-        s = '\n'
+        lines = []
         for f in self.FIELDS:
-            s += "    %-30s: %s\n" % (f.capitalize().replace('_',' '), self[f])
-        return s
+            lines.append("    %-30s: %s" % (f.capitalize().replace('_',' '), getattr(self, f)))
+        return "\n".join(lines)

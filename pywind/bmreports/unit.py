@@ -51,13 +51,15 @@ class UnitData(object):
     }
     DURATION = {'S': 'Short', 'L': 'Long'}
 
-    def __init__(self, kwargs={}):
+    def __init__(self, *args, **kwargs):
         """ Create an instance of a UnitData class. By default the
             UnitData will query for settlement period 1 yesterday for
             Derived Data.
         """
+        print kwargs
         self.data = []
         self.date = kwargs.get('date', date.today() - timedelta(days=1))
+        print self.date
         self.period = kwargs.get('period', 1)
         self.unitid = kwargs.get('unitid', '')
         self.unittype = kwargs.get('unittype', '')

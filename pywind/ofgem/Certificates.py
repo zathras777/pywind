@@ -15,101 +15,60 @@
 # limitations under the License.
 #
 
-from datetime import datetime
+#from datetime import datetime
+from django.utils.datetime_safe import datetime
+
 
 class Certificates(object):
     FIELDS = ['accreditation', 'name','capacity','scheme','country',
-              'technology','generation','period','certs',
+              'technology','output','period','certs',
               'start_no','finish_no','factor','issue_dt',
               'status','status_dt','current_holder','reg_no']
 
-    def __init__(self, line_data):
-        """ Given an array which contains a single line from a CSV formatted
-            report from the ofgem Renewables website, create an object with
-            the relevant information. The fields contained in the line are
-
-              0  - Summary of report
-              1  - Period of Generation :
-              2  - The period covered by the report
-              3  - Total certificates:
-              4  - The number of certificates covered by the report
-              5  - Accreditation No of the station
-              6  - Name of the station
-              7  - Total Installed Generating Capacity
-              8  - Scheme
-              9  - Country
-              10 - Technology Group
-              11 - Generation Type
-
-              12 - Output Period
-              13 - No. of Certificates
-              14 - Start Certificate No.
-              15 - Finish Certificate No.
-              16 - MWh per Certificate
-              17 - Issue Date
-              18 - Certificate Status
-              19 - Status Date
-              20 - Current Holder Organisation Name
-              21 - Company Registration Number
-
-            The first 5 fields are repeated on every row and are identical,
-            so are ignored for the purposes of this object.
-
-            e.g.
-              0  - 'All Certificates by Accreditation (REGO, RO)'
-              1  - 'Period of Generation :'
-              2  - 'Apr 2012 - May 2012'
-              3  - 'Total certificates:'
-              4  - '1,783,319'
-              5  - 'G01542NWSC'
-              6  - 'Farr Wind farm ltd - A'
-              7  - '92000.00'
-              8  - 'REGO'
-              9  - 'Scotland'
-              10 - 'Wind'
-              11 - 'N/A'
-              12 - 'Apr-2012'
-              13 - '9468'
-              14 - 'G01542NWSC0000000000010412300412GEN'
-              15 - 'G01542NWSC0000009467010412300412GEN'
-              16 - '1.000000000000'
-              17 - '31/05/2012'
-              18 - 'Issued'
-              19 - '31/05/2012'
-              20 - 'Beaufort Wind Ltd'
-              21 - ''
-
+    def __init__(self, node):
+        """ Extract information from the supplied XML node.
         """
-        if len(line_data) < 20 or 'No rows found' in line_data[5]:
-            return
-        self.data = line_data[5:]
-        # numbers...
-        self.data[2] = float(self.data[2])
-        self.data[8] = int(self.data[8])
-        self.data[11] = float(self.data[11])
-        # dates
-        self.data[12] = datetime.strptime(self.data[12], '%d/%m/%Y')
-        self.data[14] = datetime.strptime(self.data[14], '%d/%m/%Y')
-        # Catch odd period values...
-        if self.data[7].startswith('01'):
-            dt = datetime.strptime(self.data[7][:10], '%d/%m/%Y')
-            self.data[7] = dt.strftime("%b-%Y")
 
-    def _get_field(self, fld, exp):
-        if fld.lower() in self.FIELDS:
-            idx = self.FIELDS.index(fld.lower())
-            if self.data is not None and idx < len(self.data):
-                if isinstance(self.data[idx], basestring):
-                    return self.data[idx].strip()
-                return self.data[idx]
-        raise exp
+        mapping = [
+            ['textbox4', 'accreditation'],
+            ['textbox13', 'name'],
+            ['textbox5', 'scheme'],
+            ['textbox19', 'capacity', 0],
+            ['textbox12', 'country'],
+            ['textbox15', 'technology'],
+            ['textbox31', 'output'],
+            ['textbox18', 'period'],
+            ['textbox21', 'certs', 0],
+            ['textbox24', 'start_no'],
+            ['textbox27', 'finish_no'],
+            ['textbox37', 'factor', 0],
+            ['textbox30', 'issue_dt'],
+            ['textbox33', 'status'],
+            ['textbox36', 'status_dt'],
+            ['textbox39', 'current_holder'],
+            ['textbox45', 'reg_no']
+        ]
 
-    def __getitem__(self, key):
-        return self._get_field(key, IndexError)
+        for m in mapping:
+            self.set_attr_from_xml(node, m)
 
-    def __getattr__(self, item):
-        print "__getattr__(%s)" % item
-        return self._get_field(item, AttributeError)
+        self.factor = float(self.factor)
+        self.certs = int(self.certs) or 0
+        self.capacity = float(self.capacity) or 0
+        self.issue_dt = datetime.strptime(self.issue_dt, '%Y-%m-%dT00:00:00')
+        self.status_dt = datetime.strptime(self.status_dt, '%Y-%m-%dT00:00:00')
+
+        if self.period.startswith("01"):
+            dt = datetime.strptime(self.period[:10], '%d/%m/%Y')
+            self.period = dt.strftime("%b-%Y")
+
+    def set_attr_from_xml(self, node, mapping):
+        val = node.get(mapping[0], None)
+        if val is not None and val.isdigit():
+            val = int(val)
+        if val is None and len(mapping) == 3:
+            val = mapping[2]
+        setattr(self, mapping[1], val)
 
     def as_string(self):
         s = '\n'
@@ -118,10 +77,10 @@ class Certificates(object):
         return s
 
     def as_dict(self):
-        return {self.FIELDS[n]: self.data[n] for n in range(0, len(self.FIELDS))}
+        return {f: getattr(self, f) for f in self.FIELDS}
 
     def as_list(self):
-        return [self.data[n] for n in range(0, len(self.FIELDS))]
+        return [getattr(self, f) for f in self.FIELDS]
 
     def output_summary(self):
         perc = (float(self['certs']) / self['capacity']) * 100

@@ -16,51 +16,45 @@
 #
 
 
-from .Base import Base
+from .Base import OfgemForm
 from pywind.ofgem.Station import Station
-from .utils import parse_csv_line
+from lxml import etree
 
-class StationSearch(Base):
-    SCHEMES = {'RO': 1, 'REGO': 2}
+
+class StationSearch(object):
 
     START_URL = 'ReportViewer.aspx?ReportPath=/Renewables/Accreditation/AccreditedStationsExternalPublic&ReportVisibility=1&ReportCategory=1'
 
-    FIELDS = {
-        3:  {'name': 'scheme', 'type': 'select'},
-        5:  {'name': 'country', 'type': 'multi'},
-        7:  {'name': 'commission_year', 'type': 'select', 'all': True},
-        9:  {'name': 'accreditation_year', 'type': 'select', 'all': True},
-        11: {'name': 'commission_year', 'type': 'select', 'all': True},
-        13: {'name': 'accreditation_month', 'type': 'select', 'all': True},
-        15: {'name': 'capacity_band', 'type': 'select', 'all': True},
-        17: {'name': 'accreditation_status', 'type': 'multi', 'all': True},
-        19: {'name': 'contract_type', 'type': 'select', 'all': True},
-        21: {'name': 'technology_group', 'type': 'multi', 'all': True},
-        23: {'type': 'select', 'all': True},
-        25: {'name': 'organisation', 'type': 'text', 'null': True},
-        27: {'name': 'generating_station', 'type': 'select', 'all': True},
-        29: {'name': 'station', 'type': 'text', 'null': True},
-        31: {'name': 'accreditation_no', 'type': 'text', 'null': True},
-    }
+    def __init__(self):
+        self.form = OfgemForm(self.START_URL)
+        self.stations = []
 
-    def __init__(self, scheme = 'RO'):
-        Base.__init__(self)
+    def __len__(self):
+        return len(self.stations)
 
-        self.options = {
-            5: [1, 2, 3, 4],
-        }
-        self.set_scheme(scheme)
+    def get_data(self):
+        self.form.set_output_type('xml')
 
-    @property
-    def stations(self): return self.results
+        if self.form.get_data():
+            with open("station_search.xml", "w") as fh:
+                fh.write(self.form.data)
 
-    def parse(self):
-        for line in self.rawdata.split("\r\n"):
-            if 'textbox' in line:
-                continue
-            st = Station(line)
-            if st.is_valid:
-                self.results.append(st)
+            data_str = self.form.data.replace("&#0xD;", ", ")
+            doc = etree.fromstring(data_str)
+            for detail in doc.xpath("//*[local-name()='Detail']"):
+                self.stations.append(Station(detail))
 
-    def for_wind(self):
-        self.options[21] = [22, 23, 31, 32]
+            return True
+        return False
+
+    def filter_technology(self, what):
+        return self.form.add_filter("technology", what)
+
+    def filter_scheme(self, scheme):
+        return self.form.add_filter("scheme", scheme.upper())
+
+    def filter_name(self, name):
+        return self.form.set_text_value("Generating Station Search", name)
+
+    def filter_accreditation(self, accno):
+        return self.form.set_text_value("Accreditation Search", accno)

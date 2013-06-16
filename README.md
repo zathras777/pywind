@@ -63,6 +63,15 @@ More information can be found at http://www.bmreports.com/
 Ofgem Station & Certificate Data
 --------------------------------
 
+By using the ofgem module it is possible to access the Renewables & CHP database from Ofgem
+without needing to use their webform. It was developed to allow easy access to the data after
+attempts to use their webform failed with some modern browsers. Additionally the filtering
+options possible with the webform are unusable in many browsers.
+
+Classes are provided to search the Certifcates and Stations databases.
+
+
+
 The module provides the StationSearch and CertificateSearch classes that can
 be used to search the Ofgem database.
 
@@ -71,7 +80,7 @@ e.g. Searching for stations with Novar in their name
 ```
 >>> from pywind.ofgem import *
 >>> ss = StationSearch()
->>> ss.station = 'Novar'
+>>> ss.filter_name('Novar')
 >>> ss.get_data()
 True
 >>> print len(ss)

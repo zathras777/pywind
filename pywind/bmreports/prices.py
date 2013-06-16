@@ -70,7 +70,6 @@ class SystemPrices(object):
             return False
 
         for e in root.xpath('.//ELEMENT'):
-#            print etree.tostring(e)
             data = {'period': xpath_gettext(e, './/SP', 99),
                     'sbp': xpath_gettext(e, './/SBP', 0),
                     'ssp': xpath_gettext(e, './/SSP', 0),
