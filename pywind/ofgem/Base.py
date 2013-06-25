@@ -203,7 +203,8 @@ class OfgemForm(object):
         root = self._get_form_document(_url)
         form = root.xpath("//form")
         if len(form) == 0:
-            return
+            raise Exception("Failed to get the form")
+
         get_and_set_from_xml(self, form[0], ["action", "method"])
         if not self.action.startswith('http'):
             self.action = self.SITE_URL + self.action
@@ -248,6 +249,7 @@ class OfgemForm(object):
 
         for fld in self.fields.values():
             fld.set_postback_flag();
+#        self.Dump()
 
     def _get_or_create_field(self, name):
         if name in self.fields:
@@ -302,12 +304,17 @@ class OfgemForm(object):
         return post_data
 
     def set_output_type(self, what):
-        fld = self.fields['ReportViewer$ctl01$ctl05$ctl00']
+        try:
+            fld = self.fields['ReportViewer$ctl01$ctl05$ctl00']
+        except KeyError:
+            return False
+
         for opt in fld.options:
             if opt.value.lower() == what.lower():
                 fld.set_value(opt.value)
                 self.update_validation(fld.name)
                 break
+        return True
 
     def update_validation(self, name):
         self._get_or_create_field('__EVENTTARGET').value = name
@@ -332,6 +339,7 @@ class OfgemForm(object):
         else:
             resp = self.opener.open(self.action, urllib.urlencode(self.as_post_data()))
         document = html5lib.parse(resp, treebuilder="lxml", namespaceHTMLElements=False)
+
         return document.getroot()
 
     def get_data(self):

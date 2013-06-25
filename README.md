@@ -280,3 +280,37 @@ attempts to download and provide a list of it's contents.
 ```
 
 The date_added will be either a datetime.date object or None.
+
+DECC Planning Monthly Report
+----------------------------
+The DECC have a report showing the renewable electricity planning applications
+it knows about with their current status. It includes the capacity, address
+and geographic information as well, together with various planning dates
+and flags.
+
+>>> from pywind.decc import MonthlyExtract
+>>> me = MonthlyExtract()
+>>> me.get_data()
+True
+>>> len(me)
+4988
+>>> me.records[0]
+<pywind.decc.Report.DeccRecord object at 0x1d150d0>
+
+Each record is a DeccRecord object with a large number of attributes set. The
+records have native python types set for dates and boolean types but additionally
+have a lat & lon attribute set from the OS grid reference supplied in the
+DECC data for each site.
+
+>>> me.record[0].site_name
+'Hunterston - cofiring'
+>>> me.records[0].lat
+55.735731298569
+>>> me.records[0].lon
+-4.888572411340284
+
+As far as I can tell it is not possible to filter the data for a particular
+date range, so the entire dataset is returned each time the get_data() function
+is called. Filtering is left to the user.
+
+

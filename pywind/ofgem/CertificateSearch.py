@@ -82,7 +82,9 @@ class CertificateSearch(object):
         self.form.add_filter('scheme', what.upper())
 
     def get_data(self):
-        self.form.set_output_type('xml')
+        if self.form.set_output_type('xml') == False:
+            return False
+
         if self.form.get_data() == False:
             return False
 
