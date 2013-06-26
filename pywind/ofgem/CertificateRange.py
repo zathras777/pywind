@@ -23,7 +23,7 @@
     To solve this problem the classes in this file can be used.
 
     As an example, assume the following certificate issuances have been recorded
-    for a given period for a station.
+    for a given period for a station (assuming a factor of .25).
 
         25 Oct 2012  Issued       0-2896    Npower Renewables Ltd (Wind)
  	    25 Oct 2012	 Revoked	334-2896
@@ -37,17 +37,19 @@
     >> from datetime import date
 
     >> ct = CertificateTree()
-    >> ct.add_range(CertificateRange(0, 2896, 'Npower Renewables Ltd (Wind)', date(2012,10,25)))
-    >> ct.add_range(CertificateRange(334, 2896, None, date(2012,10,25)))
-    >> ct.add_range(CertificateRange(0, 333, 'Npower Renewables Ltd (Wind)', date(2012,10,25)))
-    >> ct.add_range(CertificateRange(2897, 5459, 'Npower Renewables Ltd (Wind)', date(2012,11,28)))
-    >> ct.add_range(CertificateRange(2897, 5459, None, date(2012,11,28)))
+    >> ct.add_range(CertificateRange(0, 2896, 'Npower Renewables Ltd (Wind)', .25, date(2012,10,25)))
+    >> ct.add_range(CertificateRange(334, 2896, None, .25, date(2012,10,25)))
+    >> ct.add_range(CertificateRange(0, 333, 'Npower Renewables Ltd (Wind)', .25, date(2012,10,25)))
+    >> ct.add_range(CertificateRange(2897, 5459, 'Npower Renewables Ltd (Wind)', .25, date(2012,11,28)))
+    >> ct.add_range(CertificateRange(2897, 5459, None, .25, date(2012,11,28)))
     >> ct.finalise()
     >> final = ct.get_final_ranges()
-    >> print final
+    >> final
     [0-333 owned by Npower Renewables Ltd (Wind)]
-    >> print len(final[0])
+    >> len(final[0])
     334
+    >> final[0].mwh()
+    84
 
     Another example.
 
@@ -59,15 +61,17 @@
     >> from datetime import date
 
     >> ct = CertificateTree()
-    >> ct.add_range(CertificateRange(0, 144, 'SmartestEnergy Ltd', date(2012, 10, 4)))
-    >> ct.add_range(CertificateRange(0, 0, 'SmartestEnergy Ltd', date(2013, 2, 19)))
-    >> ct.add_range(CertificateRange(1, 144, 'Power4All Limited', date(2013, 3, 12)))
+    >> ct.add_range(CertificateRange(0, 144, 'SmartestEnergy Ltd', 1, date(2012, 10, 4)))
+    >> ct.add_range(CertificateRange(0, 0, 'SmartestEnergy Ltd', 1, date(2013, 2, 19)))
+    >> ct.add_range(CertificateRange(1, 144, 'Power4All Limited', 1, date(2013, 3, 12)))
     >> ct.finalise()
     >> final = ct.get_final_ranges()
-    >> print final
+    >> final
     [0-0 owned by SmartestEnergy Ltd, 1-144 owned by Power4All Limited]
 
 """
+import math
+
 
 class CertificateRange(object):
     """ Class to represent a range of issued certificates. The
@@ -75,7 +79,7 @@ class CertificateRange(object):
         Created ranges are intended to be used with a CertificateTree
         object to determine the final allocations of certificates.
     """
-    def __init__(self, start, finish, owner, date=None, factor=1.000):
+    def __init__(self, start, finish, owner, factor=1.000, date=None):
         self.start = start
         self.finish = finish
         self.owner = owner
@@ -87,6 +91,13 @@ class CertificateRange(object):
 
     def __len__(self):
         return (self.finish - self.start) + 1
+
+    def mwh(self):
+        """ Use the factor to calculate the MWh that would have resulted in
+            the number of certificates being issued. Use math.ceil to round
+            up to the nearest whole number.
+        """
+        return math.ceil(((self.finish - self.start) + 1) * self.factor)
 
     def __gt__(self, other):
         if self.start < other.start: return False
@@ -114,11 +125,12 @@ class CertificateTree(object):
             it has links to nodes below (left) and above (right) of it.
             Each node also has an optional owner associated with it.
         """
-        def __init__(self, value, left=None, right=None, owner=None):
+        def __init__(self, value, left=None, right=None, owner=None, factor=1.00):
             self.value = value
             self.left = left
             self.right = right
             self.owner = owner
+            self.factor = factor
 
     def __init__(self):
         self.top_node = None
@@ -190,9 +202,10 @@ class CertificateTree(object):
             nodes = self.find_nodes_by_range(r.start, r.finish)
             for n in nodes:
                 n.owner = r.owner
+                n.factor = r.factor
 
     def _add_nodes(self, node, nodes):
-        nodes[node.value] = node.owner
+        nodes[node.value] = {'owner': node.owner, 'factor': node.factor}
         if node.left:
             self._add_nodes(node.left, nodes)
         if node.right:
@@ -213,8 +226,8 @@ class CertificateTree(object):
             v = nodes[n]
             if v:
                 if r is None:
-                    r = CertificateRange(n, n, v)
-                    owners.append(v)
+                    r = CertificateRange(n, n, v['owner'], v['factor'])
+                    owners.append(v['owner'])
                 elif r.owner == v:
                     r.finish = n
                 elif len(owners) > 0:
@@ -224,9 +237,9 @@ class CertificateTree(object):
                         owners = owners[:-1]
                     else:
                         r.finish = n - 1
-                        owners.append(v)
+                        owners.append(v['owner'])
                     ranges.append(r)
-                    r = CertificateRange(start, n, v)
+                    r = CertificateRange(start, n, v['owner'], v['factor'])
 
             elif r is not None:
                 ranges.append(r)
