@@ -17,6 +17,7 @@
 
 #from datetime import datetime
 from django.utils.datetime_safe import datetime
+import re
 
 
 class Certificates(object):
@@ -55,8 +56,8 @@ class Certificates(object):
         self.factor = float(self.factor)
         self.certs = int(self.certs) or 0
         self.capacity = float(self.capacity) or 0
-        self.issue_dt = datetime.strptime(self.issue_dt, '%Y-%m-%dT00:00:00')
-        self.status_dt = datetime.strptime(self.status_dt, '%Y-%m-%dT00:00:00')
+        self.issue_dt = datetime.strptime(re.sub(r'T.*', '', self.issue_dt), '%Y-%m-%d')
+        self.status_dt = datetime.strptime(re.sub(r'T.*', '', self.status_dt), '%Y-%m-%d')
 
         if self.period.startswith("01"):
             dt = datetime.strptime(self.period[:10], '%d/%m/%Y')
