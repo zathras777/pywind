@@ -55,8 +55,8 @@ class Certificates(object):
         self.factor = float(self.factor)
         self.certs = int(self.certs) or 0
         self.capacity = float(self.capacity) or 0
-        self.issue_dt = datetime.strptime(self.issue_dt, '%Y-%m-%dT00:00:00')
-        self.status_dt = datetime.strptime(self.status_dt, '%Y-%m-%dT00:00:00')
+        self.issue_dt = datetime.strptime(self.issue_dt, '%Y-%m-%dT%H:%M:00')
+        self.status_dt = datetime.strptime(self.status_dt, '%Y-%m-%dT%H:%M:00')
 
         if self.period.startswith("01"):
             dt = datetime.strptime(self.period[:10], '%d/%m/%Y')
@@ -73,7 +73,7 @@ class Certificates(object):
     def as_string(self):
         s = '\n'
         for f in self.FIELDS:
-            s += "    %-30s: %s\n" % (f.capitalize(), self[f])
+            s += "    %-30s: %s\n" % (f.capitalize(), getattr(self, f))
         return s
 
     def as_dict(self):
