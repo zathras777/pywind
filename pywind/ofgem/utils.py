@@ -27,15 +27,10 @@ def http_date_time_string(timestamp=None):
     return time.strftime('%a, %d %b %Y %H:%M:%S GMT', time_struct)
 
 
-def ofgem_year(yr):
-    """ For some odd reason the Ofgem form expects 2012 to be year 1,
-        2011 to be year 2 and so on. Quite when the indexing changes
-        when the year changes is unclear and despite it now being
-        March 2013, 2013 is not an option in the year list.
-    """
-    if isinstance(yr, basestring):
-        yr = int(yr)
-    return (2015 - yr) + 1
+def tidy_string(s):
+    """ Remove some unicode characters that can cause trouble. """
+    s = s.replace(u'\u2013', "-")
+    return s
 
 
 def get_period(pdstr):

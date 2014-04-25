@@ -213,7 +213,8 @@ class CertificateTree(object):
 
     def _flatten(self):
         nodes = {}
-        self._add_nodes(self.top_node, nodes)
+        if self.top_node is not None:
+            self._add_nodes(self.top_node, nodes)
         return nodes
 
     def get_final_ranges(self, node = None):
@@ -221,6 +222,9 @@ class CertificateTree(object):
         ranges = []
         owners = []
         r = None
+
+        if len(nodes) == 0:
+            return ranges
 
         for n in sorted(nodes):
             v = nodes[n]
