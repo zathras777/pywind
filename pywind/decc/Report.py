@@ -31,6 +31,8 @@ class DeccRecord(object):
               'District',
               'Region',
               'Country',
+              'Wind Turbine Capacity MW',
+              'No Wind Turbines',
               'X Coord',
               'Y Coord',
               'Pre-consent',
@@ -38,7 +40,9 @@ class DeccRecord(object):
               'Application Submitted',
               'Application Determined',
               'Construction Date',
+              'Application Number',
               'Planning Officer Recommendation',
+              'Planning Appeal Status',
               'Appeal Determined',
               'Appeal Ref Number',
               'Date on which generation commenced',
@@ -62,7 +66,11 @@ class DeccRecord(object):
     DATE_FIELDS = ['record_last_updated',
                    'application_submitted',
                    'application_determined',
-                   'appeal_determined'
+                   'appeal_determined',
+                   'construction_date',
+                   'date_on_which_generation_commenced',
+                   'developer_last_contacted',
+                   'lpa_/_cc_last_contacted'
     ]
 
     BOOLEAN_FIELDS = ['section_36',
@@ -75,9 +83,10 @@ class DeccRecord(object):
                       'natural_environment',
                       'other_land_use',
                       'built_heritage__archaeology',
-                      'project_specific'
+                      'project_specific',
+                      'chp'
     ]
-    INT_FIELDS = ['x_coord', 'y_coord']
+    INT_FIELDS = ['x_coord', 'y_coord', 'no_wind_turbines']
 
     def __init__(self, row):
         for i in range(len(self.FIELDS)):
@@ -88,7 +97,7 @@ class DeccRecord(object):
             val = getattr(self, f, None)
             if val is None:
                 continue
-            setattr(self, f, False if val.lower() == 'false' else True)
+            setattr(self, f, False if (val.lower() == 'false' or val.lower() == 'no') else True)
 
         for f in self.DATE_FIELDS:
             val = getattr(self, f, None)
