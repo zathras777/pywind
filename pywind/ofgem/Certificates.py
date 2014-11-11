@@ -6,7 +6,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,8 +15,7 @@
 # limitations under the License.
 #
 
-#from datetime import datetime
-from django.utils.datetime_safe import datetime
+from datetime import datetime
 
 
 class Certificates(object):
@@ -55,8 +54,10 @@ class Certificates(object):
         self.factor = float(self.factor)
         self.certs = int(self.certs) or 0
         self.capacity = float(self.capacity) or 0
-        self.issue_dt = datetime.strptime(self.issue_dt, '%Y-%m-%dT%H:%M:00')
-        self.status_dt = datetime.strptime(self.status_dt, '%Y-%m-%dT%H:%M:00')
+        if isinstance(self.issue_dt,str):
+            self.issue_dt = datetime.strptime(self.issue_dt, '%Y-%m-%dT%H:%M:%S')
+        if isinstance(self.status_dt,str):
+            self.status_dt = datetime.strptime(self.status_dt, '%Y-%m-%dT%H:%M:%S')
 
         if self.period.startswith("01"):
             dt = datetime.strptime(self.period[:10], '%d/%m/%Y')

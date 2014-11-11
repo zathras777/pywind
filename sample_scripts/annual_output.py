@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,7 +30,45 @@ import sys
 import csv
 from datetime import date
 
-from pywind.ofgem import *
+from pywind.ofgem import CertificateSearch
+
+TECHNOLOGY_LIST = {
+    'Aerothermal': 1,
+    'Biodegradable': 2,
+    'Biogas': 3,
+    'Biomass': 4,
+    'Biomass 50kW DNC or less': 5,
+    'Biomass using an Advanced Conversion Technology': 6,
+    'CHP Energy from Waste': 7,
+    'Co-firing of Biomass with Fossil Fuel': 8,
+    'Co-firing of Energy Crops': 9,
+    'Filled Storage Hydro': 10,
+    'Filled Storage System': 11,
+    'Fuelled': 12,
+    'Geopressure': 13,
+    'Geothermal': 14,
+    'Hydro': 15,
+    'Hydro 20MW DNC or less': 16,
+    'Hydro 50kW DNC or less': 17,
+    'Hydro greater than 20MW DNC': 18,
+    'Hydrothermal': 19,
+    'Landfill Gas': 20,
+    'Micro Hydro': 21,
+    'Ocean Energy': 22,
+    'Off-shore Wind': 23,
+    'On-shore Wind': 24,
+    'Photovoltaic': 25,
+    'Photovoltaic 50kW DNC or less': 26,
+    'Sewage Gas': 27,
+    'Solar and On-shore Wind': 28,
+    'Tidal Flow': 29,
+    'Tidal Power': 30,
+    'Waste using an Advanced Conversion Technology': 31,
+    'Wave Power': 32,
+    'Wind': 33,
+    'Wind 50kW DNC or less': 34
+}
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Extract monthly data for supplied year for Hydro or Biogas stations.')
@@ -44,38 +82,41 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.technology is None:
-        print "You must specify at least one technology group"
+        print("You must specify at least one technology group")
         sys.exit(0)
-    print "  Searching year ", args.year, "\n"
+    print("  Searching year %d \n" % args.year)
     tids = []
     fn = "_".join(args.technology) + "_%d.csv" % args.year
-    print fn
+    print(fn)
     for t in args.technology:
-        for poss in CertificateSearch.TECHNOLOGY_LIST:
+        for poss in TECHNOLOGY_LIST:
             if t.lower() in poss.lower():
-                tids.append(CertificateSearch.TECHNOLOGY_LIST[poss])
-                print "  Filter will match technology ", poss
+                tids.append(TECHNOLOGY_LIST[poss])
+                print("  Filter will match technology "+ poss)
 
     cs = CertificateSearch()
     cs.set_start_year(args.year)
     cs.set_finish_year(args.year)
     cs.set_start_month(1)
     cs.set_finish_month(12)
-    cs['scheme'] = 1
+    cs.scheme = 1
 
-    print "\n\nSearching for certificates..."
+    print("\n\nSearching for certificates...")
     cs.get_data()
-    print "\n Complete.\n\nTotal of %d records to be filtered" % len(cs)
+    print("\n Complete.\n\nTotal of %d records to be filtered" % len(cs))
     added = 0
-
-    with open(fn, 'wb') as csvfile:
-        spamwriter = csv.writer(csvfile, delimiter=',',
-                                quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        spamwriter.writerow([x.capitalize() for x in cs.certificates[0].FIELDS])
-        for c in cs.certificates:
-            for t in args.technology:
-                if t.lower() in c['technology'].lower():
-                    spamwriter.writerow(c.as_list())
-                    added += 1
-    print "Filtering complete. %d records saved as %s" % (added, fn)
+    if sys.version_info >= (3,0,0):
+        csvfile = open(fn, 'w', newline='')
+    else:
+        csvfile = open(fn, 'wb')
+    spamwriter = csv.writer(csvfile, delimiter=',',
+                            quotechar='"', quoting=csv.QUOTE_MINIMAL)
+    spamwriter.writerow([x.capitalize() for x in cs.certificates[0].FIELDS])
+    for c in cs.certificates:
+        for t in args.technology:
+            if t.lower() in c.technology.lower():
+                spamwriter.writerow(c.as_list())
+                added += 1
+    csvfile.close()
+    print("Filtering complete. %d records saved as %s" % (added, fn))
 

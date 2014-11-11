@@ -6,7 +6,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,11 +15,7 @@
 # limitations under the License.
 #
 
-import csv
-from cStringIO import StringIO
-from datetime import datetime
 from lxml import etree
-
 from .Base import OfgemForm
 from .Certificates import Certificates
 
@@ -88,10 +84,10 @@ class CertificateSearch(object):
         if self.form.get_data() == False:
             return False
 
-        with open("certificate_search.xml","w") as fh:
-            fh.write(self.form.data)
+        with open("certificate_search.xml","wb") as fh: fh.write(self.form.data)
 
-        doc = etree.fromstring(self.form.data)
+        parser = etree.XMLParser(recover=True)
+        doc = etree.fromstring(self.form.data,parser)
         for detail in doc.xpath("//*[local-name()='Detail']"):
             self.certificates.append(Certificates(detail))
 

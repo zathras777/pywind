@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -64,10 +64,15 @@
 import sys
 import argparse
 from datetime import date
-from xlwt import Alignment, XFStyle, Workbook, Worksheet
+from xlwt import Alignment, XFStyle, Workbook # , Worksheet
 
 from pywind.ofgem import CertificateSearch, StationSearch
 from pywind.ofgem.utils import get_period
+
+from future.utils import viewitems
+
+try: input = raw_input
+except NameError: pass
 
 PERIOD_START = 6
 
@@ -77,6 +82,7 @@ if __name__ == '__main__':
     parser.add_argument('--end', action='store', required=True, help='Period to finish on (MMM-YYYY)')
     parser.add_argument('--scheme', action='store', default='RO', help='Scheme to get certificates for')
     parser.add_argument('--filename', action='store', default='certificates.xls', help='Filename to export to')
+    parser.add_argument('--name', action='store', default=None, help='Part of a name of generation station (or name fragments for several stations, separated by commas)')
     args = parser.parse_args()
 
     (start_year, start_month) = get_period(args.start)
@@ -91,25 +97,29 @@ if __name__ == '__main__':
         for m in range(mm, mm2+1):
             periods.append(date(yy,m,1).strftime("%b-%Y"))
 
-    stations = []
-    while (True):
-        station = raw_input("Enter a station name (or blank to finish)")
-        if station.strip() == '':
-            break
-        if ',' in station:
-            for s in station.strip().split(','):
-                s = s.strip()
-                if s in stations:
+    station = args.name
+    if station is None:
+        stations = []
+        while (True):
+            station = input("Enter a station name (or blank to finish)")
+            if station.strip() == '':
+                break
+            if ',' in station:
+                for s in station.strip().split(','):
+                    s = s.strip()
+                    if s in stations:
+                        continue
+                    stations.append(s)
+            else:
+                station = station.strip()
+                if station in stations:
                     continue
-                stations.append(s)
-        else:
-            station = station.strip()
-            if station in stations:
-                continue
-            stations.append(station)
-
+                stations.append(station)
+    else:
+        stations = station.strip().split(',')
+        
     if len(stations) == 0:
-        print "No stations to process. Exiting..."
+        print("No stations to process. Exiting...")
         sys.exit(0)
 
     wb = Workbook()
@@ -125,11 +135,11 @@ if __name__ == '__main__':
     title_style = XFStyle()
     title_style.alignment = al
 
-    print "\nTotal of %d stations to process\n" % len(stations)
+    print("\nTotal of %d stations to process\n" % len(stations))
     for i in range(0, len(stations)):
         s = stations[i]
         col = 1 + 5 * i
-        print "    ", s
+        print("    "+ s)
 
         # add headers
         ws.write(PERIOD_START - 1, col, "Installed Capacity")
@@ -142,17 +152,18 @@ if __name__ == '__main__':
         for scheme in ['RO','REGO']:
             offset = 1 if scheme == 'RO' else 3
             ss = StationSearch()
-            ss.for_wind()
-            ss.set_scheme(scheme)
-            ss.station = s
+            #ss.for_wind()
+            ss.filter_scheme(scheme)
+            ss.filter_name(s)
             if not ss.get_data():
-                print "Unable to find any station with a name %s" % s
+                print("Unable to find any station with a name %s" % s)
                 continue
 
             station = None
+            # if more than one generator has matched, use the first WIND one 
             if len(ss) > 1:
                 for st in ss.stations:
- #                   print st.as_string()
+ #                   print(st.as_string())
                     if 'wind' in st.technology.lower():
                         station = st
                         break
@@ -160,7 +171,7 @@ if __name__ == '__main__':
                 station = ss.stations[0]
 
             if station is None:
-                print "Unable to get station data for '%s'" % s
+                print("Unable to get station data for '%s'" % s)
                 continue
 
             # Write name
@@ -178,7 +189,7 @@ if __name__ == '__main__':
 
             cs = CertificateSearch()
 
-            cs.set_scheme(scheme)
+            cs.filter_scheme(scheme)
             cs.set_start_month(start_month)
             cs.set_start_year(start_year)
             cs.set_finish_month(end_month)
@@ -186,26 +197,26 @@ if __name__ == '__main__':
             cs.accreditation = station.accreditation
 
             if not cs.get_data():
-                print "Unable to get any certificate data :-("
+                print("Unable to get any certificate data :-(")
                 continue
 
             data = {}
             for c in cs.certificates:
-#                print c.as_string()
-                if c['status'] in ['Revoked','Retired','Expired']:
+                # print(c.as_string())
+                if c.status in ['Revoked','Retired','Expired']:
                     continue
 
                 row = periods.index(c.period) + PERIOD_START
-                if not capacity.has_key(c.period):
+                if not c.period in capacity:
                     ws.write(row, col, c.capacity)
                     capacity[c.period] = True
 
                 data[c.period] = data.get(c.period,0) + c.certs
                 ws.write(row, col + offset + 1, c.factor)
 
-            for p,val in data.iteritems():
+            for p,val in viewitems(data):
                 row = periods.index(p) + PERIOD_START
                 ws.write(row, col + offset, val)
 
-    print "\nComplete. Excel spreadsheet %s" % args.filename
+    print("\nComplete. Excel spreadsheet %s" % args.filename)
     wb.save(args.filename)

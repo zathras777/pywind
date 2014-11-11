@@ -6,7 +6,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,11 +16,10 @@
 #
 
 import re
-import urllib
-import urllib2
-import cookielib
 import html5lib
+import requests
 from lxml import etree
+from future.utils import viewitems
 
 
 def get_and_set_from_xml(obj, element, attrs=[]):
@@ -141,6 +140,7 @@ class OfgemField(object):
         return None
 
     def filter_values(self, val):
+        val = val.lower()
         if not self.tag in ['input','text', 'select'] or len(self.options) == 0:
             return False
 
@@ -148,7 +148,7 @@ class OfgemField(object):
             if self.tag == 'select':
                 opt.selected = val in opt.label
             else:
-                if val in opt.label:
+                if val in opt.label.lower():
                     opt.checked = True
                 else:
                     opt.checked = False
@@ -163,15 +163,12 @@ class OfgemForm(object):
 
     SITE_URL = 'https://www.renewablesandchp.ofgem.gov.uk/Public/'
     def __init__(self, endpoint):
-        self.cj = cookielib.CookieJar()
-        cookie_handler = urllib2.HTTPCookieProcessor(self.cj)
-        httpsHandler = urllib2.HTTPSHandler(debuglevel = 0)
-        self.opener = urllib2.build_opener(cookie_handler, httpsHandler)
-
+        self.opener = requests.session()
         self.action = None
         self.fields = {}
         self.field_labels = {}
         self.data = None
+        self.text = None
         self.get_form(endpoint)
 
     def _get_field_labels(self, root):
@@ -230,7 +227,7 @@ class OfgemForm(object):
                     if parent in self.fields:
                         self.fields[parent].options.append(of)
                     else:
-                        print "Unknown parent...", parent
+                        print("Unknown parent...", parent)
 
             else:
                 if of.type != 'radio' or not of.name in self.fields:
@@ -300,7 +297,8 @@ class OfgemForm(object):
         post_data = {}
         for v in self.fields.values():
             for fld in v.as_post_data():
-                post_data[fld['name']] = fld['value']
+                if 'value' in fld:
+                    post_data[fld['name']] = fld['value']
         return post_data
 
     def set_output_type(self, what):
@@ -335,10 +333,13 @@ class OfgemForm(object):
                 return None
             if not url.startswith('http'):
                 url = self.SITE_URL + url
-            resp = self.opener.open(url)
+            resp = self.opener.get(url)
         else:
-            resp = self.opener.open(self.action, urllib.urlencode(self.as_post_data()))
-        document = html5lib.parse(resp, treebuilder="lxml", namespaceHTMLElements=False)
+            postdata = self.as_post_data()
+            resp = self.opener.post(self.action,data=postdata)
+
+        # TODO might need content (bytes) or text (unicode)
+        document = html5lib.parse(resp.content, treebuilder="lxml", namespaceHTMLElements=False)
 
         return document.getroot()
 
@@ -353,7 +354,7 @@ class OfgemForm(object):
             if script.text is None:
                 continue
             if "RSToolbar(" in script.text:
-#                print script.text
+#                print(script.text)
                 ck = re.search("new RSToolbar\((.*)\);", script.text)
                 if ck is None:
                     return False
@@ -366,25 +367,19 @@ class OfgemForm(object):
         if data_url is None:
             return False
 
-        docresp = self.opener.open(data_url)
+        docresp = self.opener.get(data_url)
 
-        if docresp.code != 200:
+        if docresp.status_code != 200:
             return False
 
-        self.data = docresp.read()
+        self.data = docresp.content
         if len(self.data) == 0:
-            return False
-
-#        self.dumpPostData()
-
-        if docresp.headers['content-type'] == 'text/plain':
-            # data is sent as utf-16, so convert to utf-8
-            self.data = self.data.decode('utf-16').encode('utf-8')
+            return False     
 
         return True
 
     def _find_field_by_label(self, lbl):
-        for k, v in self.field_labels.iteritems():
+        for k, v in viewitems(self.field_labels):
             if lbl.lower() in v.lower():
                 if k in self.fields:
                     return self.fields[k]
@@ -423,14 +418,14 @@ class OfgemForm(object):
         return True
 
     def Dump(self):
-        for k,v in self.fields.iteritems():
+        for k,v in viewitems(self.fields):
             if k in self.field_labels:
-                print self.field_labels[k]
+                print(self.field_labels[k])
             else:
-                print k
+                print(k)
             for opts in v.options:
-                print "      %50s : %s" % (opts.label, opts.raw_value())
+                print("      %50s : %s" % (opts.label, opts.raw_value()))
 
     def dumpPostData(self):
-        for k, v in self.as_post_data().iteritems():
-            print "%-30s: %s" % (k,v)
+        for k, v in viewitems(self.as_post_data()):
+            print("%-30s: %s" % (k,v))

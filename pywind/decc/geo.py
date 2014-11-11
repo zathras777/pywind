@@ -11,7 +11,7 @@ which is (c) Chris Veness 2005-2012.
 """
 
 import math
-
+from future.utils import viewitems
 
 class LatLon(object):
     OSGB36 = 1
@@ -83,7 +83,7 @@ class LatLon(object):
 
         if self.scheme == self.OSGB36 and scheme == self.WGS84:
             txFromOSGB36 = {}
-            for k,v in self.DATUM_TRANSFORM['toOSGB36'].iteritems():
+            for k,v in viewitems(self.DATUM_TRANSFORM['toOSGB36']):
                 txFromOSGB36[k] = -v
             self.convertEllipsoid(self.ELLIPSIS['Airy1830'],
                                   txFromOSGB36,

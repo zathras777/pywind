@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -25,6 +25,7 @@
 import argparse
 from datetime import datetime, timedelta, date
 from pywind.bmreports import UnitData
+from future.utils import viewitems
 
 def mkdate(datestr):
     return datetime.strptime(datestr, '%Y-%m-%d').date()
@@ -36,22 +37,22 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     data = {}
-    ud = UnitData({'date': args.date or date.today() - timedelta(days=2)})
-    pr = [args.period] or range(1,49)
+    ud = UnitData({'date': date.today() - timedelta(days=2) if args.date is None else args.date})
+    pr = range(1,49) if args.period is None else [args.period]
     for period in pr:
-        ud.period = period
+        ud.period = str(period)
         if ud.get_data():
             data[period] = ud.data
         else:
-            print "Unable to get data for %s, period %d" % (ud.date.strftime("%d %b %Y"), period)
+            print("Unable to get data for %s, period %d" % (ud.date.strftime("%d %b %Y"), period))
 
-    for period, units in sorted(data.iteritems()):
-        print "Period: ", period
+    for period, units in sorted(viewitems(data)):
+        print("Period: "+ str(period))
         for unit in sorted(units, key=lambda x: x['ngc']):
-            print "  ", unit['ngc'], unit['lead']
-            if unit['bid'].has_key('volume'):
-                print "      BID:   ", unit['bid']['volume']+'MWh  ', unit['bid']['cashflow']
-            if unit['offer'].has_key('volume'):
-                print "      OFFER: ", unit['offer']['volume']+'MWh  ', unit['offer']['cashflow']
+            print("  ", unit['ngc'], unit['lead'])
+            if 'volume' in unit['bid'] and 'cashflow' in unit['bid']:
+                print("      BID:   "+ unit['bid']['volume']+'MWh  '+ unit['bid']['cashflow'])
+            if 'volume' in unit['offer'] and 'cashflow' in unit['offer']:
+                print("      OFFER: "+ unit['offer']['volume']+'MWh  '+ unit['offer']['cashflow'])
 
 
