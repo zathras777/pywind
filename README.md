@@ -32,7 +32,8 @@ program that reproduces the problem.
 The ofgem module retrieves data from Ofgem's Renewables & CHP database, without the user having to
 negotiate their webform which breaks in modern browsers.
 
-The module provides the `StationSearch` and `CertificateSearch` classes that can
+The module provides the [StationSearch](pywind/ofgem/StationSearch.py#L24) and 
+[CertificateSearch](pywind/ofgem/CertificateSearch.py#L22) classes that can
 be used to search the Ofgem database.
 
 Example 1: [sample script onestation.py](sample_scripts/onestation.py) gives an example of retrieving
@@ -50,7 +51,8 @@ http://www.ofgem.gov.uk/Pages/OfgemHome.aspx
 
 ##ROC Prices
 
-These are obtained from the eROC auction site using the `EROCPrices` class
+These are obtained from the eROC auction site using the
+[EROCPrices](pywind/roc/eroc.py#L5) class
 within the roc module. The prices for the various periods listed are then
 available by using the object as a `dict`. See, for example, the [ROC price
 sample script](sample_scripts/rocprice.py).
@@ -87,14 +89,16 @@ this restriction in mind when accessing the site and downloading data.
 
 ###Electricity Prices
 To get the System Sell Price (SSP) and the System Buy Price (SBP) for a given date
-the `SystemPrices` class can be used. See, for example, the [bmdata.py
-sample script](sample_scripts/bmdata.py)
+the [SystemPrices](pywind/bmreports/prices.py#L22) class can be used.
+See, for example, the [bmdata.py sample script](sample_scripts/bmdata.py)
 
 
 ###Derived Unit Data
-The `UnitData` class allows the BMReports reports to be accessed.
+The [UnitData](pywind/bmreports/unit.py#L33) class allows the BMReports reports
+to be accessed.
 Presently this class defaults to querying the Derived Data to extract information
-on Constraint Payments made. See for example the [sample script derived\_unit\_data.py](sample_scripts/derived_unit_data.py)
+on Constraint Payments made. See for example the
+[sample script derived\_unit\_data.py](sample_scripts/derived_unit_data.py)
 
 
 ###Balancing Mechanism Units
@@ -110,10 +114,10 @@ stations. The impact of this on the capacity data released is discussed in some
 detail in a PDF document by James Hemingway (available at https://www.gov.uk/government/uploads/system/uploads/attachment_data/file/65923/6487-nat-grid-metering-data-et-article-sep12.pdf)
 
 To obtain a list of the wind stations that are connected to the grid via HV and as
-such have their output considered the Power Pack spreadsheet can be used. This class
-attempts to download and provide a list of its contents.
+such have their output considered the [PowerPackUnits](pywind/bmreports/unit.py#L225)
+class should be used. The class downloads the Power Pack Modules spreadsheet and extracts its contents.
 
-See the [powerpack.py sample script](sample_scripts/powerpack.py) for details.
+See [powerpack.py](sample_scripts/powerpack.py) for a simple example.
 
 NB the `date_added` will be either a `datetime.date` object or `None`.
 
@@ -125,14 +129,11 @@ the UK and can be accessed via the `bmreports` module.
 
 To get the data, see e.g. the [gendata.py](sample_scripts/gendata.py) sample script
 
-This will create a `GenerationData` object that will contain summary generation
-data covering the previous
+This will create a [GenerationData](pywind/bmreports/generation_type.py#L110)
+object that will contain summary generation data covering the previous 24 hours,
+30 minutes, and instantaneous observations.
 
-- 24 hours
-- 30 minutes
-- instant
-
-Each period is available as a dict object containing the resultant values and
+Each period is available as a `dict` object containing the resultant values and
 time periods, e.g.
 ```python
 '24hours': {'start': datetime.datetime(2013, 3, 3, 10, 30),
@@ -152,7 +153,7 @@ time periods, e.g.
 	{'code': 'INTIRL', 'percent': '0.0', 'name': 'Import from Ireland', 'value': '163'},
 	{'code': 'INTNED', 'percent': '2.2', 'name': 'Import from the Netherlands', 'value': '21252'},
 	{'code': 'INTEW', 'percent': '0.0', 'name': 'East/West Interconnector', 'value': '0'}
-			]
-			}
+	]
+	}
 ```
 More information can be found at http://www.bmreports.com/
