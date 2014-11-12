@@ -6,7 +6,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,7 +17,7 @@
 
 
 from .Base import OfgemForm
-from pywind.ofgem.Station import Station
+from .Station import Station
 from lxml import etree
 
 
@@ -36,10 +36,9 @@ class StationSearch(object):
         self.form.set_output_type('xml')
 
         if self.form.get_data():
-            with open("station_search.xml", "w") as fh:
-                fh.write(self.form.data)
+            with open("station_search.xml", "wb") as fh: fh.write(self.form.data)
 
-            data_str = self.form.data.replace("&#0xD;", ", ")
+            data_str = self.form.data.decode('utf-8').replace("&#0xD;", ", ")
             doc = etree.fromstring(data_str)
             for detail in doc.xpath("//*[local-name()='Detail']"):
                 self.stations.append(Station(detail))

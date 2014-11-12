@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#! python2
 # coding=utf-8
 
 # Copyright 2013 david reid <zathrasorama@gmail.com>
@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,7 +18,7 @@
 
 import argparse
 
-from pywind.ofgem import *
+from pywind.ofgem.StationSearch import StationSearch
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Search ofgem database for matching stations')
@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    osd = StationSearch(args.scheme)
+    osd = StationSearch() # args.scheme
     crit = "Searching for Ofgem Stations: scheme %s" % args.scheme
 
     if args.name:
@@ -45,10 +45,10 @@ if __name__ == '__main__':
         osd.options[31] = args.accreditation.upper()
         crit += ", accreditation number = '%s'" % args.accreditation.upper()
 
-    print crit
+    print(crit)
     if osd.get_data():
-        print "Query returned %d results" % len(osd)
+        print("Query returned %d results" % len(osd))
         for s in osd.stations:
-            print s.as_string()
+            print(s.as_string().encode('utf-8'))
     else:
-        print "No stations were returned"
+        print("No stations were returned")

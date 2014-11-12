@@ -1,6 +1,6 @@
 from datetime import datetime
 from lxml import html
-import urllib2
+import requests
 
 class EROCPrices(object):
     URL = "http://www.e-roc.co.uk/trackrecord.htm"
@@ -11,7 +11,7 @@ class EROCPrices(object):
 
     def get_prices(self):
         try:
-            resp = urllib2.urlopen(self.URL)
+            resp = requests.get(self.URL)
         except:
             return
 
@@ -28,19 +28,19 @@ class EROCPrices(object):
                 except ValueError:
                     continue
                 numperiod = dt.year * 100 + dt.month
-                if self.periods.has_key(numperiod):
+                if numperiod in self.periods:
                     self.periods[numperiod] = (self.periods[numperiod] + avg) / 2
                 else:
                     self.periods[numperiod] = avg
 
-        doc = html.parse(resp)
+        doc = html.fromstring(resp.content)
         for t in doc.findall('.//table'):
-#            tr = t.findall('.//tr')
+            # tr = t.findall('.//tr')
             if 'Auction Date' in alltext(t.findall('.//tr')[0]):
                 process_table(t)
 
 
     def __getitem__(self, item):
-        if self.periods.has_key(item):
+        if item in self.periods:
             return self.periods[item]
         raise KeyError("No such period available [%s]" % item)

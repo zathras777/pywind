@@ -6,7 +6,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,12 +18,11 @@ from datetime import timedelta, date, datetime
 from lxml import etree
 import os
 from tempfile import NamedTemporaryFile
-import urllib
-import urllib2
 from lxml.etree import XMLSyntaxError
 import xlrd
+import requests
 
-from pywind.bmreports.utils import _geturl, xpath_gettext
+from .utils import _geturl, xpath_gettext
 
 def _mkdate(book, sheet, row, col):
     val = sheet.cell(row, col).value
@@ -56,11 +55,11 @@ class UnitData(object):
             UnitData will query for settlement period 1 yesterday for
             Derived Data.
         """
-        print kwargs
+        print(kwargs)
         self.data = []
         self.date = kwargs.get('date', date.today() - timedelta(days=1))
-        print self.date
-        self.period = kwargs.get('period', 1)
+        print(self.date)
+        self.period = kwargs.get('period', '1')
         self.unitid = kwargs.get('unitid', '')
         self.unittype = kwargs.get('unittype', '')
         self.leadparty = kwargs.get('leadparty', '')
@@ -90,11 +89,10 @@ class UnitData(object):
 
         if self.historic:
             url = 'http://www.bmreports.com/bsp/additional/soapfunctions.php?'
-            url += urllib.urlencode(base)
-            req = _geturl(url)
-            if req is None or req.code != 200:
+            req = _geturl(url,params=base)
+            if req is None or req.status_code != 200:
                 return False
-            return self._process(req)
+            return self._process(req.content)
         return False
 
     def as_dict(self):
@@ -146,8 +144,9 @@ class UnitData(object):
             Units can have both Bid & Offer results in the same Settlement Period.
         """
         try:
-            root = etree.parse(req)
-        except XMLSyntaxError:
+            parser = etree.XMLParser(recover= True) 
+            root = etree.XML(req, parser)
+        except:
             return False
 
         ELEMENTS = [
@@ -158,7 +157,7 @@ class UnitData(object):
         ]
 
         for bmu in root.xpath(".//ACCEPT_PERIOD_TOTS//*//BMU"):
-#            print etree.tostring(bmu)
+#            print(etree.tostring(bmu))
             bmud = {'id': bmu.get('ID'),
                     'type': bmu.get('TYPE'),
                     'lead': bmu.get('LEAD_PARTY'),
@@ -200,10 +199,10 @@ class UnitList(object):
 
     def get_list(self):
         self.units = []
-        req = urllib2.urlopen(self.XLS_URL)
+        req = requests.get(self.XLS_URL)
         f = NamedTemporaryFile(delete=False)
-        with open(f.name, 'w') as fh:
-            fh.write(req.read())
+        with open(f.name, 'wb') as fh:
+            fh.write(req.content)
 
         wb = xlrd.open_workbook(f.name)
         sh = wb.sheet_by_name(u'BMU Fuel Types')
@@ -220,7 +219,8 @@ class UnitList(object):
 
             self.units.append(ud)
 
-        os.unlink(f.name)
+        try: os.unlink(f.name)
+        except: pass
 
 
 class PowerPackUnits(object):
@@ -241,10 +241,10 @@ class PowerPackUnits(object):
 
     def get_list(self):
         self.units = []
-        req = urllib2.urlopen(self.XLS_URL)
+        req = requests.get(self.XLS_URL)
         f = NamedTemporaryFile(delete=False)
-        with open(f.name, 'w') as fh:
-            fh.write(req.read())
+        with open(f.name, 'wb') as fh:
+            fh.write(req.content)
 
         wb = xlrd.open_workbook(f.name)
         sh = wb.sheet_by_name(u'Sheet1')
@@ -263,4 +263,5 @@ class PowerPackUnits(object):
                 break
             self.units.append(ud)
 
-        os.unlink(f.name)
+        try: os.unlink(f.name)
+        except: pass

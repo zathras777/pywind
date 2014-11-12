@@ -6,7 +6,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,13 +16,11 @@
 from datetime import date
 
 from lxml import etree
-import urllib
-import lxml
-from pywind.bmreports.utils import _geturl, xpath_gettext
+from .utils import _geturl, xpath_gettext
 
 
 class SystemPrices(object):
-    URL = 'http://www.bmreports.com/bsp/additional/soapfunctions.php'
+    URL = 'http://www.bmreports.com/bsp/additional/soapfunctions.php?'
 
     def __init__(self, dt=None):
         self.dt = dt or date.today()
@@ -30,11 +28,10 @@ class SystemPrices(object):
 
     def get_data(self):
         data = {'element': 'SYSPRICE', 'dT': self.dt.strftime("%Y-%m-%d")}
-        url = self.URL + '?' + urllib.urlencode(data)
-        req = _geturl(url)
-        if req is None or req.code != 200:
+        req = _geturl(self.URL, params = data)
+        if req is None or req.status_code != 200:
             return False
-        return self._process(req)
+        return self._process(req.content)
 
     def _process(self, req):
         """ The XML data returned from the request should contain a series of
@@ -65,7 +62,8 @@ class SystemPrices(object):
             :param: req: The request object to process.
         """
         try:
-            root = etree.parse(req).getroot()
+            parser = etree.XMLParser(recover= True)
+            root = etree.XML(req, parser).getroottree()
         except:
             return False
 

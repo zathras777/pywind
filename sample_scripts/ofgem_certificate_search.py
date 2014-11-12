@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 import argparse
-from datetime import datetime
+#from datetime import datetime
 from pywind.ofgem.CertificateSearch import CertificateSearch
 
 if __name__ == '__main__':
@@ -46,7 +46,10 @@ if __name__ == '__main__':
         ocs['accreditation_no'] = args.accreditation.upper()
         crits.append("accreditation number '%s'" % args.accreditation.upper())
 
-    print crit + ", ".join(crits)
-    ocs.dump_post_data()
+    print(crit + ", ".join(crits))
+    #ocs.dump_post_data()
     ocs.get_data()
-    print "Total of %d records returned" % len(ocs)
+    for s in ocs.certificates:
+        print(s.as_string())
+
+    print("Total of %d records returned" % len(ocs))

@@ -1,9 +1,8 @@
-from cookielib import CookieJar
 import csv
+import sys
+import requests
 from datetime import datetime
-import urllib2
-from pywind.decc.geo import osGridToLatLong, LatLon
-
+from .geo import osGridToLatLong, LatLon
 
 def field_to_attr(fld):
     fld = fld.lower()
@@ -31,6 +30,8 @@ class DeccRecord(object):
               'District',
               'Region',
               'Country',
+              'Wind Turbine Capacity MW',
+              'No Wind Turbines',
               'X Coord',
               'Y Coord',
               'Pre-consent',
@@ -38,7 +39,9 @@ class DeccRecord(object):
               'Application Submitted',
               'Application Determined',
               'Construction Date',
+              'Application Number',
               'Planning Officer Recommendation',
+              'Planning Appeal Status',
               'Appeal Determined',
               'Appeal Ref Number',
               'Date on which generation commenced',
@@ -62,7 +65,11 @@ class DeccRecord(object):
     DATE_FIELDS = ['record_last_updated',
                    'application_submitted',
                    'application_determined',
-                   'appeal_determined'
+                   'appeal_determined',
+                   'construction_date',
+                   'date_on_which_generation_commenced',
+                   'developer_last_contacted',
+                   'lpa_/_cc_last_contacted'
     ]
 
     BOOLEAN_FIELDS = ['section_36',
@@ -75,9 +82,10 @@ class DeccRecord(object):
                       'natural_environment',
                       'other_land_use',
                       'built_heritage__archaeology',
-                      'project_specific'
+                      'project_specific',
+                      'chp'
     ]
-    INT_FIELDS = ['x_coord', 'y_coord']
+    INT_FIELDS = ['x_coord', 'y_coord', 'no_wind_turbines']
 
     def __init__(self, row):
         for i in range(len(self.FIELDS)):
@@ -88,16 +96,15 @@ class DeccRecord(object):
             val = getattr(self, f, None)
             if val is None:
                 continue
-            setattr(self, f, False if val.lower() == 'false' else True)
+            setattr(self, f, False if (val.lower() == 'false' or val.lower() == 'no') else True)
 
         for f in self.DATE_FIELDS:
-            val = getattr(self, f, None)
-            if val is None:
-                continue
-            if val == '':
-                setattr(self, f, None)
-            else:
+            try:
+                val = getattr(self, f, None)
                 setattr(self, f, datetime.strptime(val, "%Y-%m-%d").date())
+            except:
+                setattr(self, f, None)
+                
         for f in self.INT_FIELDS:
             val = getattr(self, f, 0)
             if val == '':
@@ -115,30 +122,27 @@ class DeccRecord(object):
         setattr(self, 'lat', latlon.lat)
         setattr(self, 'lon', latlon.lon)
 
-    def Dump(self):
+    def dump(self):
         for f in self.FIELDS:
-            print "%-30s: %s" % (f, getattr(self, field_to_attr(f), ''))
+            print("%-30s: %s" % (f, getattr(self, field_to_attr(f), '')))
 
 
 class MonthlyExtract(object):
     URL = "https://restats.decc.gov.uk/app/reporting/decc/monthlyextract/style/csv/csvwhich/reporting.decc.monthlyextract"
 
     def __init__(self):
-        self.cookieJar = CookieJar()
-        cookie_handler = urllib2.HTTPCookieProcessor(self.cookieJar)
-        httpsHandler = urllib2.HTTPSHandler(debuglevel = 0)
-        self.opener = urllib2.build_opener(cookie_handler, httpsHandler)
+        self.opener = requests.session()
         self.records = []
 
     def __len__(self):
         return len(self.records)
 
     def get_data(self):
-        resp = self.opener.open(self.URL)
-        if resp.code != 200:
+        resp = self.opener.get(self.URL)
+        if resp.status_code != 200:
             return False
-
-        reader = csv.reader(resp)
+        stream = resp.content if sys.version_info.major==2 else resp.text
+        reader = csv.reader(csv.StringIO(stream))
         for row in reader:
             if row[0] == 'Reference':
                 continue

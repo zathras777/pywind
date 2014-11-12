@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,12 +17,10 @@
 #
 #
 
-import urllib
-import urllib2
 from lxml import etree
 from datetime import datetime, timedelta
 from lxml.etree import XMLSyntaxError
-
+import requests
 
 class FuelRecord(object):
     FUELS = {'CCGT': 'Combined Cycle Gas Turbine',
@@ -110,7 +108,7 @@ class GenerationPeriod(object):
 
 
 class GenerationData(object):
-    URL = "http://www.bmreports.com/bsp/additional/soapfunctions.php"
+    URL = "http://www.bmreports.com/bsp/additional/soapfunctions.php?"
     PARAMS = {'element': 'generationbyfueltypetable'}
 
     def __init__(self):
@@ -121,17 +119,18 @@ class GenerationData(object):
     def get_data(self):
         """ Get data from the BM Reports website. Try 3 times.
         """
-        url = self.URL + '?' + urllib.urlencode(self.PARAMS)
         resp = None
         for attempt in range(0, 3):
             try:
-                resp = urllib2.urlopen(url)
+                resp = requests.get(self.URL,params = self.PARAMS)
+                if resp.status_code == 200: break
             except:
                 pass
 
-        if resp is not None and resp.code == 200:
+        if resp is not None and resp.status_code == 200:
             try:
-                self.xml = etree.parse(resp).getroot()
+                parser = etree.XMLParser(recover=True)
+                self.xml = etree.XML(resp.content,parser).getroottree()
             except XMLSyntaxError:
                 return
             for section in ['INST', 'HH', 'LAST24H']:
