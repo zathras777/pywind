@@ -62,7 +62,8 @@ class SystemPrices(object):
             :param: req: The request object to process.
         """
         try:
-            root = etree.XML(req).getroottree()
+            parser = etree.XMLParser(recover= True)
+            root = etree.XML(req, parser).getroottree()
         except:
             return False
 

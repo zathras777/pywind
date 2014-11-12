@@ -15,7 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+"""This demonstrates the .bmreports.SystemPrices class,
+by retrieving system sell prices and buy prices for today.
+"""
 from pywind.bmreports import SystemPrices
 s = SystemPrices()
 s.get_data()

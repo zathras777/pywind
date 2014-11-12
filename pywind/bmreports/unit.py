@@ -144,8 +144,9 @@ class UnitData(object):
             Units can have both Bid & Offer results in the same Settlement Period.
         """
         try:
-            root = etree.XML(req)
-        except XMLSyntaxError:
+            parser = etree.XMLParser(recover= True) 
+            root = etree.XML(req, parser)
+        except:
             return False
 
         ELEMENTS = [

@@ -103,7 +103,7 @@ on Constraint Payments made. See for example the
 
 ###Balancing Mechanism Units
 The list of units (with their fuel types) is available as an Excel spreadsheet from the BMReports
-website. The [UnitList](pywind/bmreports/unit.py#L177) class can be used to get and parse the current list.
+website. The [UnitList](pywind/bmreports/unit.py#L178) class can be used to get and parse the current list.
 See for example the [bm\_unit\_list.py sample script](sample_scripts/bm_unit_list.py)
 
 
