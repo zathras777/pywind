@@ -1,4 +1,5 @@
 # coding=utf-8
+
 #
 # Copyright 2013 david reid <zathrasorama@gmail.com>
 #
@@ -16,9 +17,15 @@
 #
 
 import csv
-from cStringIO import StringIO
 from datetime import datetime
 from lxml import etree
+
+
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
+
 
 from .Base import OfgemForm
 from .Certificates import Certificates

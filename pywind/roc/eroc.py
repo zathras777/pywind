@@ -1,6 +1,8 @@
 from datetime import datetime
 from lxml import html
-import urllib2
+
+from pywind.ofgem.utils import get_url
+
 
 class EROCPrices(object):
     URL = "http://www.e-roc.co.uk/trackrecord.htm"
@@ -11,7 +13,7 @@ class EROCPrices(object):
 
     def get_prices(self):
         try:
-            resp = urllib2.urlopen(self.URL)
+            resp = get_url(self.URL)
         except:
             return
 
@@ -21,7 +23,8 @@ class EROCPrices(object):
         def process_table(tbl):
             for row in tbl.findall('.//tr'):
                 datestr = alltext(row[0])
-                if 'Auction Date' in datestr: continue
+                if 'Auction Date' in datestr:
+                    continue
                 try:
                     avg = float(alltext(row[1])[1:])
                     dt = datetime.strptime(datestr, "%d %B %Y")
@@ -35,12 +38,10 @@ class EROCPrices(object):
 
         doc = html.parse(resp)
         for t in doc.findall('.//table'):
-#            tr = t.findall('.//tr')
             if 'Auction Date' in alltext(t.findall('.//tr')[0]):
                 process_table(t)
 
-
     def __getitem__(self, item):
-        if self.periods.has_key(item):
+        if item in self.periods:
             return self.periods[item]
         raise KeyError("No such period available [%s]" % item)

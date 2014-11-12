@@ -14,12 +14,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from datetime import date
 
+from datetime import date
 from lxml import etree
-import urllib
-import lxml
-from .utils import _geturl, xpath_gettext
+
+from pywind.ofgem.utils import get_url
+from .utils import xpath_gettext
 
 
 class SystemPrices(object):
@@ -31,9 +31,9 @@ class SystemPrices(object):
 
     def get_data(self):
         data = {'element': 'SYSPRICE', 'dT': self.dt.strftime("%Y-%m-%d")}
-        url = self.URL + '?' + urllib.urlencode(data)
-        req = _geturl(url)
+        req = get_url(self.URL, data)
         if req is None or req.code != 200:
+            print("Unable to get data...")
             return False
         return self._process(req)
 
@@ -67,7 +67,7 @@ class SystemPrices(object):
         """
         try:
             parser = etree.XMLParser(recover=True)
-            root = etree.XML(req, parser).getroottree()
+            root = etree.XML(req.read(), parser).getroottree()
         except:
             return False
 

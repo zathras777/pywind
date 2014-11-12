@@ -1,6 +1,7 @@
 # coding=utf-8
+
 #
-# Copyright 2013 david reid <zathrasorama@gmail.com>
+# Copyright 2013, 2014 david reid <zathrasorama@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,8 +16,6 @@
 # limitations under the License.
 
 import os
-import urllib
-import urllib2
 import xlrd
 
 from datetime import timedelta, date, datetime
@@ -24,8 +23,8 @@ from lxml import etree
 from lxml.etree import XMLSyntaxError
 from tempfile import NamedTemporaryFile
 
-
-from .utils import _geturl, xpath_gettext
+from .utils import xpath_gettext
+from pywind.ofgem.utils import get_url
 
 
 def _mkdate(book, sheet, row, col):
@@ -93,9 +92,7 @@ class UnitData(object):
         self.data = []
 
         if self.historic:
-            url = 'http://www.bmreports.com/bsp/additional/soapfunctions.php?'
-            url += urllib.urlencode(base)
-            req = _geturl(url)
+            req = get_url('http://www.bmreports.com/bsp/additional/soapfunctions.php?', base)
             if req is None or req.code != 200:
                 return False
             return self._process(req)
@@ -205,7 +202,7 @@ class UnitList(object):
 
     def get_list(self):
         self.units = []
-        req = urllib2.urlopen(self.XLS_URL)
+        req = get_url(self.XLS_URL)
         f = NamedTemporaryFile(delete=False)
         with open(f.name, 'w') as fh:
             fh.write(req.read())
@@ -248,7 +245,7 @@ class PowerPackUnits(object):
 
     def get_list(self):
         self.units = []
-        req = urllib2.urlopen(self.XLS_URL)
+        req = get_url(self.XLS_URL)
         f = NamedTemporaryFile(delete=False)
         with open(f.name, 'w') as fh:
             fh.write(req.read())

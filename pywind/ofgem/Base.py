@@ -17,9 +17,8 @@
 
 import re
 import urllib
-import urllib2
-import cookielib
 import html5lib
+
 from lxml import etree
 
 
@@ -163,11 +162,7 @@ class OfgemForm(object):
 
     SITE_URL = 'https://www.renewablesandchp.ofgem.gov.uk/Public/'
     def __init__(self, endpoint):
-        self.cj = cookielib.CookieJar()
-        cookie_handler = urllib2.HTTPCookieProcessor(self.cj)
-        httpsHandler = urllib2.HTTPSHandler(debuglevel = 0)
-        self.opener = urllib2.build_opener(cookie_handler, httpsHandler)
-
+        self.web = HttpsWithCookies()
         self.action = None
         self.fields = {}
         self.field_labels = {}
@@ -334,10 +329,12 @@ class OfgemForm(object):
                 return None
             if not url.startswith('http'):
                 url = self.SITE_URL + url
-            resp = self.opener.open(url)
+            resp = self.web.open(url)
         else:
-            resp = self.opener.open(self.action, urllib.urlencode(self.as_post_data()))
-        document = html5lib.parse(resp, treebuilder="lxml", namespaceHTMLElements=False)
+            resp = self.web.open(self.action, urllib.urlencode(self.as_post_data()))
+        document = html5lib.parse(resp,
+                                  treebuilder="lxml",
+                                  namespaceHTMLElements=False)
 
         return document.getroot()
 
@@ -364,7 +361,7 @@ class OfgemForm(object):
         if data_url is None:
             return False
 
-        docresp = self.opener.open(data_url)
+        docresp = self.web.open(data_url)
 
         if docresp.code != 200:
             return False

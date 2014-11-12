@@ -17,11 +17,10 @@
 #
 #
 
-import urllib
-import urllib2
 from lxml import etree
 from datetime import datetime, timedelta
 from lxml.etree import XMLSyntaxError
+from pywind.ofgem.utils import get_url
 
 
 class FuelRecord(object):
@@ -121,17 +120,11 @@ class GenerationData(object):
     def get_data(self):
         """ Get data from the BM Reports website. Try 3 times.
         """
-        url = self.URL + '?' + urllib.urlencode(self.PARAMS)
-        resp = None
-        for attempt in range(0, 3):
-            try:
-                resp = urllib2.urlopen(url)
-            except:
-                pass
-
+        resp = get_url(self.URL, self.PARAMS)
         if resp is not None and resp.code == 200:
             try:
-                self.xml = etree.parse(resp).getroot()
+                parser = etree.XMLParser(recover=True)
+                self.xml = etree.XML(resp, parser).gettreeroot()
             except XMLSyntaxError:
                 return
             for section in ['INST', 'HH', 'LAST24H']:

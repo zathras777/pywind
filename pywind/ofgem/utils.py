@@ -1,4 +1,5 @@
 # coding=utf-8
+
 #
 # Copyright 2013 david reid <zathrasorama@gmail.com>
 #
@@ -17,8 +18,18 @@
 
 # Utility functions for the ofgem module.
 
+import sys
 import time
 from datetime import datetime
+
+try:
+    from urllib import urlencode
+    from urllib2 import HTTPCookieProcessor, HTTPSHandler, build_opener, urlopen
+    from cookielib import CookieJar
+except ImportError:
+    from urllib.request import HTTPCookieProcessor, HTTPSHandler, build_opener, urlopen
+    from urllib.parse import urlencode
+    from http.cookiejar import CookieJar
 
 
 def http_date_time_string(timestamp=None):
@@ -50,6 +61,7 @@ def get_period(pdstr):
         return 0,0
     return dt.year, dt.month
 
+
 def parse_csv_line(line):
     """ Standard CSV parser doesn't parse station lines correctly,
         so use this to get the correct data.
@@ -72,3 +84,45 @@ def parse_csv_line(line):
     if len(s):
         pieces.append(s)
     return pieces
+
+
+def viewitems(obj, **kwargs):
+    """ Provide support for iterating over a dict in both
+        Python 2 and 3.
+        Code from the future module.
+    """
+    func = getattr(obj, "viewitems", None)
+    if not func:
+        func = obj.items
+    return func(**kwargs)
+
+
+class HttpsWithCookies(object):
+    def __init__(self):
+        self.cookieJar = CookieJar()
+        cookie_handler = HTTPCookieProcessor(self.cookieJar)
+        httpsHandler = HTTPSHandler(debuglevel = 0)
+        self.opener = build_opener(cookie_handler, httpsHandler)
+
+    def open(self, url, data=None):
+        return self.opener.open(url, data)
+
+
+def get_url(url, data=None):
+    """ Perform a simple GET request, optionally using the supplied data.
+        Returns None if unable to get the url after 3 attempts, or an object
+        encapsulating the opened url.
+    """
+    req_url = url
+    if data:
+        if not url.endswith('?'):
+            req_url += '?'
+        req_url += urlencode(data)
+    for attempt in range(0, 3):
+        try:
+            return urlopen(req_url)
+        except:
+            e = sys.exc_info()[0]
+            print("Failed {0} of 3, retrying...".format(attempt))
+            print(e)
+    return None

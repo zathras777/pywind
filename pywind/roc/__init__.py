@@ -1,1 +1,1 @@
-from eroc import EROCPrices
+from .eroc import EROCPrices

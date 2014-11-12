@@ -15,8 +15,7 @@
 # limitations under the License.
 #
 
-#from datetime import datetime
-from django.utils.datetime_safe import datetime
+from datetime import datetime
 
 
 class Certificates(object):
