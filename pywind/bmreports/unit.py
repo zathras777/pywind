@@ -14,22 +14,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import timedelta, date, datetime
-from lxml import etree
 import os
-from tempfile import NamedTemporaryFile
 import urllib
 import urllib2
-from lxml.etree import XMLSyntaxError
 import xlrd
 
-from pywind.bmreports.utils import _geturl, xpath_gettext
+from datetime import timedelta, date, datetime
+from lxml import etree
+from lxml.etree import XMLSyntaxError
+from tempfile import NamedTemporaryFile
+
+
+from .utils import _geturl, xpath_gettext
+
 
 def _mkdate(book, sheet, row, col):
     val = sheet.cell(row, col).value
     if val == '':
         return None
     return datetime(*xlrd.xldate_as_tuple(val, book.datemode)).date()
+
 
 class UnitData(object):
     """ Class that gets data about Balancing Mechanism Units
@@ -146,7 +150,8 @@ class UnitData(object):
             Units can have both Bid & Offer results in the same Settlement Period.
         """
         try:
-            root = etree.parse(req)
+            parser = etree.XMLParser(recover=True)
+            root = etree.XML(req, parser).getroottree()
         except XMLSyntaxError:
             return False
 
@@ -180,6 +185,7 @@ class UnitList(object):
         Fuel Type and dates.
     """
     XLS_URL='http://www.bmreports.com/bsp/staticdata/BMUFuelType.xls'
+
     def __init__(self):
         self.get_list()
 
@@ -218,8 +224,10 @@ class UnitList(object):
                 del(ud['sett_id'])
 
             self.units.append(ud)
-
-        os.unlink(f.name)
+        try:
+            os.unlink(f.name)
+        except:
+            pass
 
 
 class PowerPackUnits(object):
@@ -262,4 +270,8 @@ class PowerPackUnits(object):
                 break
             self.units.append(ud)
 
-        os.unlink(f.name)
+        try:
+            os.unlink(f.name)
+        except:
+            pass
+

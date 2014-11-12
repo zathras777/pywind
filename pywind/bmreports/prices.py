@@ -1,4 +1,5 @@
 # coding=utf-8
+
 #
 # Copyright 2013 david reid <zathrasorama@gmail.com>
 #
@@ -18,7 +19,7 @@ from datetime import date
 from lxml import etree
 import urllib
 import lxml
-from pywind.bmreports.utils import _geturl, xpath_gettext
+from .utils import _geturl, xpath_gettext
 
 
 class SystemPrices(object):
@@ -65,7 +66,8 @@ class SystemPrices(object):
             :param: req: The request object to process.
         """
         try:
-            root = etree.parse(req).getroot()
+            parser = etree.XMLParser(recover=True)
+            root = etree.XML(req, parser).getroottree()
         except:
             return False
 
