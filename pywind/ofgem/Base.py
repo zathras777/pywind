@@ -230,7 +230,7 @@ class OfgemForm(object):
                     if parent in self.fields:
                         self.fields[parent].options.append(of)
                     else:
-                        print "Unknown parent...", parent
+                        print("Unknown parent...", parent)
 
             else:
                 if of.type != 'radio' or not of.name in self.fields:
@@ -249,7 +249,6 @@ class OfgemForm(object):
 
         for fld in self.fields.values():
             fld.set_postback_flag();
-#        self.Dump()
 
     def _get_or_create_field(self, name):
         if name in self.fields:
@@ -353,7 +352,6 @@ class OfgemForm(object):
             if script.text is None:
                 continue
             if "RSToolbar(" in script.text:
-#                print script.text
                 ck = re.search("new RSToolbar\((.*)\);", script.text)
                 if ck is None:
                     return False
@@ -374,8 +372,6 @@ class OfgemForm(object):
         self.data = docresp.read()
         if len(self.data) == 0:
             return False
-
-#        self.dumpPostData()
 
         if docresp.headers['content-type'] == 'text/plain':
             # data is sent as utf-16, so convert to utf-8
@@ -422,15 +418,15 @@ class OfgemForm(object):
         self.update_validation(fld.name)
         return True
 
-    def Dump(self):
+    def dump(self):
         for k,v in self.fields.iteritems():
             if k in self.field_labels:
-                print self.field_labels[k]
+                print(self.field_labels[k])
             else:
-                print k
+                print(k)
             for opts in v.options:
-                print "      %50s : %s" % (opts.label, opts.raw_value())
+                print("      %50s : %s" % (opts.label, opts.raw_value()))
 
-    def dumpPostData(self):
+    def dump_post_data(self):
         for k, v in self.as_post_data().iteritems():
-            print "%-30s: %s" % (k,v)
+            print("%-30s: %s" % (k,v))

@@ -56,10 +56,10 @@ class UnitData(object):
             UnitData will query for settlement period 1 yesterday for
             Derived Data.
         """
-        print kwargs
+        #print(kwargs)
         self.data = []
         self.date = kwargs.get('date', date.today() - timedelta(days=1))
-        print self.date
+        #print(self.date)
         self.period = kwargs.get('period', 1)
         self.unitid = kwargs.get('unitid', '')
         self.unittype = kwargs.get('unittype', '')
@@ -158,7 +158,6 @@ class UnitData(object):
         ]
 
         for bmu in root.xpath(".//ACCEPT_PERIOD_TOTS//*//BMU"):
-#            print etree.tostring(bmu)
             bmud = {'id': bmu.get('ID'),
                     'type': bmu.get('TYPE'),
                     'lead': bmu.get('LEAD_PARTY'),

@@ -8,8 +8,8 @@ def _geturl(url):
             return urllib2.urlopen(url)
         except:
             e = sys.exc_info()[0]
-            print "Failed %d of 3, retrying..." % t
-            print e
+            print("Failed {0} of 3, retrying...".format(t))
+            print(e)
     return None
 
 

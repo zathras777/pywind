@@ -117,7 +117,7 @@ class DeccRecord(object):
 
     def Dump(self):
         for f in self.FIELDS:
-            print "%-30s: %s" % (f, getattr(self, field_to_attr(f), ''))
+            print("%-30s: %s" % (f, getattr(self, field_to_attr(f), '')))
 
 
 class MonthlyExtract(object):
