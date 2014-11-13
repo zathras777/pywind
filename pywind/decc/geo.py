@@ -198,11 +198,11 @@ def osGridToLatLong(E, N):
     rho = a*F0*(1-e2)/math.pow(1-e2*sinLat*sinLat, 1.5)
     eta2 = nu/rho-1
 
-    tanLat = math.tan(lat);
+    tanLat = math.tan(lat)
     tan2lat = tanLat*tanLat
     tan4lat = tan2lat*tan2lat
     tan6lat = tan4lat*tan2lat
-    secLat = 1/cosLat;
+    secLat = 1/cosLat
     nu3 = nu*nu*nu
     nu5 = nu3*nu*nu
     nu7 = nu5*nu*nu
@@ -210,10 +210,10 @@ def osGridToLatLong(E, N):
     VII = tanLat/(2*rho*nu)
     VIII = tanLat/(24*rho*nu3)*(5+3*tan2lat+eta2-9*tan2lat*eta2)
     IX = tanLat/(720*rho*nu5)*(61+90*tan2lat+45*tan4lat)
-    X = secLat/nu;
-    XI = secLat/(6*nu3)*(nu/rho+2*tan2lat);
-    XII = secLat/(120*nu5)*(5+28*tan2lat+24*tan4lat);
-    XIIA = secLat/(5040*nu7)*(61+662*tan2lat+1320*tan4lat+720*tan6lat);
+    X = secLat/nu
+    XI = secLat/(6*nu3)*(nu/rho+2*tan2lat)
+    XII = secLat/(120*nu5)*(5+28*tan2lat+24*tan4lat)
+    XIIA = secLat/(5040*nu7)*(61+662*tan2lat+1320*tan4lat+720*tan6lat)
 
     dE = (E-E0)
     dE2 = dE*dE

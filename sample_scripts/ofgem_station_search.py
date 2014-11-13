@@ -17,10 +17,12 @@
 #
 
 import argparse
+import sys
 
 from pywind.ofgem.StationSearch import StationSearch
 
-if __name__ == '__main__':
+def test(theseargs):
+
     parser = argparse.ArgumentParser(description='Search ofgem database for matching stations')
     parser.add_argument('--name', action='store', help='Station name to search for')
     parser.add_argument('--accreditation', action='store', help='Accreditation number to search for')
@@ -28,7 +30,7 @@ if __name__ == '__main__':
                         help='Scheme to search (ignored for accreditation) default REGO')
     parser.add_argument('--organisation', action='store', help='Organisation to search for')
 
-    args = parser.parse_args()
+    args = parser.parse_args(args=theseargs)
 
     osd = StationSearch() # args.scheme
     crit = "Searching for Ofgem Stations: scheme %s" % args.scheme
@@ -47,8 +49,11 @@ if __name__ == '__main__':
 
     print(crit)
     if osd.get_data():
-        print("Query returned %d results" % len(osd))
-        for s in osd.stations:
+        print("Query returned %d results - here are the first two:" % len(osd))
+        for s in osd.stations[0:1]:
             print(s.as_string().encode('utf-8'))
     else:
         print("No stations were returned")
+
+if __name__ == '__main__':
+    test(sys.argv[1:])

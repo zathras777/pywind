@@ -114,7 +114,7 @@ stations. The impact of this on the capacity data released is discussed in some
 detail in a PDF document by James Hemingway (available at https://www.gov.uk/government/uploads/system/uploads/attachment_data/file/65923/6487-nat-grid-metering-data-et-article-sep12.pdf)
 
 To obtain a list of the wind stations that are connected to the grid via HV and as
-such have their output considered the [PowerPackUnits](pywind/bmreports/unit.py#L225)
+such have their output considered the [PowerPackUnits](pywind/bmreports/unit.py#L227)
 class should be used. The class downloads the Power Pack Modules spreadsheet and extracts its contents.
 
 See [powerpack.py](sample_scripts/powerpack.py) for a simple example.

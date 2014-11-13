@@ -73,6 +73,12 @@ class CertificateSearch(object):
 
     def filter_generation_type(self, what):
         self.form.add_filter('generation', what)
+        
+    def filter_accreditation(self, what): # TODO to test
+        self.form.set_text_value('accreditation', what)
+
+    def filter_status(self, what): # TODO to test
+        self.form.add_filter('status', what)
 
     def filter_scheme(self, what):
         self.form.add_filter('scheme', what.upper())
@@ -87,7 +93,7 @@ class CertificateSearch(object):
         with open("certificate_search.xml","wb") as fh: fh.write(self.form.data)
 
         parser = etree.XMLParser(recover=True)
-        doc = etree.fromstring(self.form.data,parser)
+        doc = etree.fromstring(self.form.data.decode('utf-8'),parser)
         for detail in doc.xpath("//*[local-name()='Detail']"):
             self.certificates.append(Certificates(detail))
 

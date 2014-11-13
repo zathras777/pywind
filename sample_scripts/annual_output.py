@@ -70,7 +70,8 @@ TECHNOLOGY_LIST = {
 }
 
 
-if __name__ == '__main__':
+def test(theseargs):
+
     parser = argparse.ArgumentParser(description='Extract monthly data for supplied year for Hydro or Biogas stations.')
     parser.add_argument('--year',
                         action='store',
@@ -79,7 +80,7 @@ if __name__ == '__main__':
                         help='Year to extract data for')
     parser.add_argument('--technology', nargs='*')
 
-    args = parser.parse_args()
+    args = parser.parse_args(args=theseargs)
 
     if args.technology is None:
         print("You must specify at least one technology group")
@@ -105,7 +106,7 @@ if __name__ == '__main__':
     cs.get_data()
     print("\n Complete.\n\nTotal of %d records to be filtered" % len(cs))
     added = 0
-    if sys.version_info >= (3,0,0):
+    if sys.version_info.major > 2:
         csvfile = open(fn, 'w', newline='')
     else:
         csvfile = open(fn, 'wb')
@@ -120,3 +121,6 @@ if __name__ == '__main__':
     csvfile.close()
     print("Filtering complete. %d records saved as %s" % (added, fn))
 
+
+if __name__ == '__main__':
+    test(sys.argv[1:])

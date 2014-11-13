@@ -140,18 +140,24 @@ class OfgemField(object):
         return None
 
     def filter_values(self, val):
-        val = val.lower()
+        if isinstance(val, list):
+            val = [oneval.lower() for oneval in val]
+        else:
+            val = [val.lower()]
+
         if not self.tag in ['input','text', 'select'] or len(self.options) == 0:
             return False
 
         for opt in self.options:
+            check = False
+            tst = opt.label.lower()
+            for eachval in val:
+                if eachval in tst:
+                    check = True
             if self.tag == 'select':
-                opt.selected = val in opt.label
+                opt.selected = check
             else:
-                if val in opt.label.lower():
-                    opt.checked = True
-                else:
-                    opt.checked = False
+                opt.checked = check
         return True
 
 
@@ -246,7 +252,6 @@ class OfgemForm(object):
 
         for fld in self.fields.values():
             fld.set_postback_flag();
-#        self.Dump()
 
     def _get_or_create_field(self, name):
         if name in self.fields:
@@ -338,7 +343,6 @@ class OfgemForm(object):
             postdata = self.as_post_data()
             resp = self.opener.post(self.action,data=postdata)
 
-        # TODO might need content (bytes) or text (unicode)
         document = html5lib.parse(resp.content, treebuilder="lxml", namespaceHTMLElements=False)
 
         return document.getroot()
@@ -354,7 +358,6 @@ class OfgemForm(object):
             if script.text is None:
                 continue
             if "RSToolbar(" in script.text:
-#                print(script.text)
                 ck = re.search("new RSToolbar\((.*)\);", script.text)
                 if ck is None:
                     return False
@@ -373,6 +376,7 @@ class OfgemForm(object):
             return False
 
         self.data = docresp.content
+        self.text = docresp.text
         if len(self.data) == 0:
             return False     
 
@@ -417,7 +421,7 @@ class OfgemForm(object):
         self.update_validation(fld.name)
         return True
 
-    def Dump(self):
+    def dump(self):
         for k,v in viewitems(self.fields):
             if k in self.field_labels:
                 print(self.field_labels[k])
@@ -426,6 +430,6 @@ class OfgemForm(object):
             for opts in v.options:
                 print("      %50s : %s" % (opts.label, opts.raw_value()))
 
-    def dumpPostData(self):
+    def dump_post_data(self):
         for k, v in viewitems(self.as_post_data()):
             print("%-30s: %s" % (k,v))

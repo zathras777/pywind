@@ -4,6 +4,8 @@ import requests
 from datetime import datetime
 from .geo import osGridToLatLong, LatLon
 
+RECORD_FIELDS = []
+ 
 def field_to_attr(fld):
     fld = fld.lower()
     for c in [' ', '-', '/']:
@@ -11,57 +13,7 @@ def field_to_attr(fld):
     return fld
 
 class DeccRecord(object):
-    FIELDS = ['Reference',
-              'NFFO/SRO/NI-NFFO/Non-NFFO',
-              'General Technology',
-              'Technology Type',
-              'Section 36',
-              'Contractor (/Applicant)',
-              'Site Name',
-              'Installed Capacity (Elec)',
-              'CHP',
-              'OffShore Wind Round',
-              'Address 1',
-              'Address 2',
-              'Address 3',
-              'Address 4',
-              'Town',
-              'County',
-              'District',
-              'Region',
-              'Country',
-              'Wind Turbine Capacity MW',
-              'No Wind Turbines',
-              'X Coord',
-              'Y Coord',
-              'Pre-consent',
-              'Post-consent',
-              'Application Submitted',
-              'Application Determined',
-              'Construction Date',
-              'Application Number',
-              'Planning Officer Recommendation',
-              'Planning Appeal Status',
-              'Appeal Determined',
-              'Appeal Ref Number',
-              'Date on which generation commenced',
-              'Green Belt',
-              'National Park',
-              'AONB',
-              'Heritage Coast',
-              'Special Landscape Area',
-              'Employment Use',
-              'Natural Environment',
-              'Other Land Use',
-              'Built Heritage/ Archaeology',
-              'Project Specific',
-              'Relevant Supporting Details',
-              'Developer Last Contacted',
-              'LPA / CC Last Contacted',
-              'LPA Name',
-              'Record Last Updated'
-    ]
-
+    
     DATE_FIELDS = ['record_last_updated',
                    'application_submitted',
                    'application_determined',
@@ -88,8 +40,8 @@ class DeccRecord(object):
     INT_FIELDS = ['x_coord', 'y_coord', 'no_wind_turbines']
 
     def __init__(self, row):
-        for i in range(len(self.FIELDS)):
-            attr = field_to_attr(self.FIELDS[i])
+        for i in range(len(RECORD_FIELDS)):
+            attr = field_to_attr(RECORD_FIELDS[i])
             setattr(self, attr, row[i])
 
         for f in self.BOOLEAN_FIELDS:
@@ -123,7 +75,7 @@ class DeccRecord(object):
         setattr(self, 'lon', latlon.lon)
 
     def dump(self):
-        for f in self.FIELDS:
+        for f in RECORD_FIELDS:
             print("%-30s: %s" % (f, getattr(self, field_to_attr(f), '')))
 
 
@@ -138,6 +90,7 @@ class MonthlyExtract(object):
         return len(self.records)
 
     def get_data(self):
+        global RECORD_FIELDS
         resp = self.opener.get(self.URL)
         if resp.status_code != 200:
             return False
@@ -145,6 +98,7 @@ class MonthlyExtract(object):
         reader = csv.reader(csv.StringIO(stream))
         for row in reader:
             if row[0] == 'Reference':
+                RECORD_FIELDS = row
                 continue
             d = DeccRecord(row)
             self.records.append(d)

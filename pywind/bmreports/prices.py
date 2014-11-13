@@ -14,9 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from datetime import date
-
+import requests
 from lxml import etree
-from .utils import _geturl, xpath_gettext
+from .utils import xpath_gettext
 
 
 class SystemPrices(object):
@@ -28,7 +28,7 @@ class SystemPrices(object):
 
     def get_data(self):
         data = {'element': 'SYSPRICE', 'dT': self.dt.strftime("%Y-%m-%d")}
-        req = _geturl(self.URL, params = data)
+        req = requests.get(self.URL, params = data)
         if req is None or req.status_code != 200:
             return False
         return self._process(req.content)

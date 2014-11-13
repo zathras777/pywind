@@ -64,7 +64,7 @@
 import sys
 import argparse
 from datetime import date
-from xlwt import Alignment, XFStyle, Workbook # , Worksheet
+from xlwt import Alignment, XFStyle, Workbook
 
 from pywind.ofgem import CertificateSearch, StationSearch
 from pywind.ofgem.utils import get_period
@@ -76,14 +76,15 @@ except NameError: pass
 
 PERIOD_START = 6
 
-if __name__ == '__main__':
+def test(theseargs):
+
     parser = argparse.ArgumentParser(description='Download bulk information from Ofgem to produce an Excel spreadsheet')
     parser.add_argument('--start', action='store', required=True, help='Period to start from (MMM-YYYY)')
     parser.add_argument('--end', action='store', required=True, help='Period to finish on (MMM-YYYY)')
     parser.add_argument('--scheme', action='store', default='RO', help='Scheme to get certificates for')
     parser.add_argument('--filename', action='store', default='certificates.xls', help='Filename to export to')
     parser.add_argument('--name', action='store', default=None, help='Part of a name of generation station (or name fragments for several stations, separated by commas)')
-    args = parser.parse_args()
+    args = parser.parse_args(args=theseargs)
 
     (start_year, start_month) = get_period(args.start)
     (end_year, end_month) = get_period(args.end)
@@ -161,9 +162,11 @@ if __name__ == '__main__':
 
             station = None
             # if more than one generator has matched, use the first WIND one 
-            if len(ss) > 1:
+            if len(ss.stations) > 1:
+                print('Several stations found that match %s:' % s)
+                print(list(st.name for st in ss.stations))
+                print('The first wind station will be selected')
                 for st in ss.stations:
- #                   print(st.as_string())
                     if 'wind' in st.technology.lower():
                         station = st
                         break
@@ -186,16 +189,16 @@ if __name__ == '__main__':
                 ws.write_merge(PERIOD_START - 3, PERIOD_START - 3, col, col + 4,
                                'REGO: ' + station.accreditation + '  [' + station.commission_dt.strftime("%d %b %Y") + ']',
                                title_style)
-
             cs = CertificateSearch()
 
-            cs.filter_scheme(scheme)
             cs.set_start_month(start_month)
             cs.set_start_year(start_year)
             cs.set_finish_month(end_month)
             cs.set_finish_year(end_year)
-            cs.accreditation = station.accreditation
-
+            cs.filter_accreditation(station.accreditation)
+            #cs.filter_scheme(scheme) # seems to work ok without this, and REGOs break with it
+            #cs.filter_status(['Revoked','Retired','Expired']) # this doesn't work
+            
             if not cs.get_data():
                 print("Unable to get any certificate data :-(")
                 continue
@@ -220,3 +223,6 @@ if __name__ == '__main__':
 
     print("\nComplete. Excel spreadsheet %s" % args.filename)
     wb.save(args.filename)
+    
+if __name__ == '__main__':
+    test(sys.argv[1:])

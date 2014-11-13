@@ -18,17 +18,17 @@ from datetime import timedelta, date, datetime
 from lxml import etree
 import os
 from tempfile import NamedTemporaryFile
-from lxml.etree import XMLSyntaxError
 import xlrd
 import requests
 
-from .utils import _geturl, xpath_gettext
+from .utils import xpath_gettext
 
 def _mkdate(book, sheet, row, col):
     val = sheet.cell(row, col).value
     if val == '':
         return None
     return datetime(*xlrd.xldate_as_tuple(val, book.datemode)).date()
+
 
 class UnitData(object):
     """ Class that gets data about Balancing Mechanism Units
@@ -89,7 +89,7 @@ class UnitData(object):
 
         if self.historic:
             url = 'http://www.bmreports.com/bsp/additional/soapfunctions.php?'
-            req = _geturl(url,params=base)
+            req = requests.get(url,params=base)
             if req is None or req.status_code != 200:
                 return False
             return self._process(req.content)
@@ -180,6 +180,7 @@ class UnitList(object):
         Fuel Type and dates.
     """
     XLS_URL='http://www.bmreports.com/bsp/staticdata/BMUFuelType.xls'
+    
     def __init__(self):
         self.get_list()
 

@@ -16,17 +16,19 @@
 # limitations under the License.
 #
 import argparse
-#from datetime import datetime
+import sys
 from pywind.ofgem.CertificateSearch import CertificateSearch
 
-if __name__ == '__main__':
+
+def test(theseargs):
+    
     parser = argparse.ArgumentParser(description='Get ofgem certificates for a given month & year')
     parser.add_argument('--month', type=int, default=1, action='store', help='Month')
     parser.add_argument('--year', type=int, default=2012, action='store', help='Year')
     parser.add_argument('--accreditation', action='store', help='Accreditation number to search for')
     parser.add_argument('--scheme', action='store', help='Scheme to search (defaults to RO and REGO)')
 
-    args = parser.parse_args()
+    args = parser.parse_args(args=theseargs)
 
     ocs = CertificateSearch()
 
@@ -49,7 +51,10 @@ if __name__ == '__main__':
     print(crit + ", ".join(crits))
     #ocs.dump_post_data()
     ocs.get_data()
-    for s in ocs.certificates:
+    print("Total of %d records returned. Here are the first two:" % len(ocs))
+    for s in ocs.certificates[0:1]:
         print(s.as_string())
 
-    print("Total of %d records returned" % len(ocs))
+
+if __name__ == '__main__':
+    test(sys.argv[1:])

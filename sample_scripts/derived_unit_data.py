@@ -22,6 +22,7 @@
     It does not attempt to cater for long or short days and simply assumes
     that there will be 48 settlement periods.
 """
+import sys
 import argparse
 from datetime import datetime, timedelta, date
 from pywind.bmreports import UnitData
@@ -30,11 +31,12 @@ from future.utils import viewitems
 def mkdate(datestr):
     return datetime.strptime(datestr, '%Y-%m-%d').date()
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Get Constraint Payment information for yesterday')
-    parser.add_argument('--date', action='store', type=mkdate, help='Date to get results for')
-    parser.add_argument('--period', action='store', help='Period to get data for')
-    args = parser.parse_args()
+def test(theseargs):
+
+    parser = argparse.ArgumentParser(description='Get Constraint Payment information for a specific date, and optionally for a specific period')
+    parser.add_argument('--date', action='store', type=mkdate, help='Date to get results for (yyyy-mm-dd)')
+    parser.add_argument('--period', action='store', help='Period to get data for (1-48)')
+    args = parser.parse_args(args=theseargs)
 
     data = {}
     ud = UnitData({'date': date.today() - timedelta(days=2) if args.date is None else args.date})
@@ -45,7 +47,7 @@ if __name__ == '__main__':
             data[period] = ud.data
         else:
             print("Unable to get data for %s, period %d" % (ud.date.strftime("%d %b %Y"), period))
-
+    
     for period, units in sorted(viewitems(data)):
         print("Period: "+ str(period))
         for unit in sorted(units, key=lambda x: x['ngc']):
@@ -54,5 +56,7 @@ if __name__ == '__main__':
                 print("      BID:   "+ unit['bid']['volume']+'MWh  '+ unit['bid']['cashflow'])
             if 'volume' in unit['offer'] and 'cashflow' in unit['offer']:
                 print("      OFFER: "+ unit['offer']['volume']+'MWh  '+ unit['offer']['cashflow'])
+        break # only print 1 set of data for the test
 
-
+if __name__ == '__main__':
+    test(sys.argv[1:])
