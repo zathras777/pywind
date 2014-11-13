@@ -19,11 +19,9 @@ import os
 import xlrd
 
 from datetime import timedelta, date, datetime
-from lxml import etree
-from lxml.etree import XMLSyntaxError
 from tempfile import NamedTemporaryFile
 
-from .utils import xpath_gettext
+from .utils import xpath_gettext, parse_response_as_xml
 from pywind.ofgem.utils import get_url
 
 
@@ -146,10 +144,8 @@ class UnitData(object):
             should be shown in the ORIGINAL elements.
             Units can have both Bid & Offer results in the same Settlement Period.
         """
-        try:
-            parser = etree.XMLParser(recover=True)
-            root = etree.XML(req, parser).getroottree()
-        except XMLSyntaxError:
+        root = parse_response_as_xml(req)
+        if root is None:
             return False
 
         ELEMENTS = [

@@ -17,9 +17,10 @@
 #
 #
 
-from lxml import etree
+
 from datetime import datetime, timedelta
-from lxml.etree import XMLSyntaxError
+
+from .utils import parse_response_as_xml
 from pywind.ofgem.utils import get_url
 
 
@@ -121,14 +122,15 @@ class GenerationData(object):
         """ Get data from the BM Reports website. Try 3 times.
         """
         resp = get_url(self.URL, self.PARAMS)
-        if resp is not None and resp.code == 200:
-            try:
-                parser = etree.XMLParser(recover=True)
-                self.xml = etree.XML(resp, parser).gettreeroot()
-            except XMLSyntaxError:
-                return
-            for section in ['INST', 'HH', 'LAST24H']:
-                self.sections.append(GenerationPeriod(self.xml.xpath(section)[0]))
+        if resp is None or resp.code != 200:
+            return
+
+        self.xml = parse_response_as_xml(resp)
+        if self.xml is None:
+            return
+
+        for section in ['INST', 'HH', 'LAST24H']:
+            self.sections.append(GenerationPeriod(self.xml.xpath(section)[0]))
 
     def as_dict(self):
         """ Return the data as a dict object.

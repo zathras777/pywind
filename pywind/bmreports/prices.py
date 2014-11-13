@@ -1,7 +1,7 @@
 # coding=utf-8
 
 #
-# Copyright 2013 david reid <zathrasorama@gmail.com>
+# Copyright 2013, 2014 david reid <zathrasorama@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,10 +16,9 @@
 # limitations under the License.
 
 from datetime import date
-from lxml import etree
 
 from pywind.ofgem.utils import get_url
-from .utils import xpath_gettext
+from .utils import xpath_gettext, parse_response_as_xml
 
 
 class SystemPrices(object):
@@ -65,10 +64,8 @@ class SystemPrices(object):
 
             :param: req: The request object to process.
         """
-        try:
-            parser = etree.XMLParser(recover=True)
-            root = etree.XML(req.read(), parser).getroottree()
-        except:
+        root = parse_response_as_xml(req)
+        if root is None:
             return False
 
         for e in root.xpath('.//ELEMENT'):
