@@ -15,7 +15,7 @@ class EROCPrices(object):
         try:
             resp = get_url(self.URL)
         except:
-            return
+            return False
 
         def alltext(el):
             return (''.join(el.text_content())).strip()
@@ -31,7 +31,7 @@ class EROCPrices(object):
                 except ValueError:
                     continue
                 numperiod = dt.year * 100 + dt.month
-                if self.periods.has_key(numperiod):
+                if numperiod in self.periods:
                     self.periods[numperiod] = (self.periods[numperiod] + avg) / 2
                 else:
                     self.periods[numperiod] = avg
@@ -40,6 +40,7 @@ class EROCPrices(object):
         for t in doc.findall('.//table'):
             if 'Auction Date' in alltext(t.findall('.//tr')[0]):
                 process_table(t)
+        return True
 
     def __getitem__(self, item):
         if item in self.periods:

@@ -51,9 +51,14 @@ class CertificateSearch(object):
     def __init__(self):
         self.form = OfgemForm(self.START_URL)
         self.certificates = []
+        self.output_fn = None
 
     def __len__(self):
         return len(self.certificates)
+
+    def __getitem__(self, item):
+        if 0 >= item < len(self.certificates):
+            return self.certificates[item]
 
     def set_month(self, m):
         self.set_start_month(m)
@@ -95,8 +100,9 @@ class CertificateSearch(object):
         if self.form.get_data() == False:
             return False
 
-        with open("certificate_search.xml","w") as fh:
-            fh.write(self.form.data)
+        if self.output_fn:
+            with open(self.output_fn, "w") as fh:
+                fh.write(self.form.data)
 
         doc = etree.fromstring(self.form.data)
         for detail in doc.xpath("//*[local-name()='Detail']"):

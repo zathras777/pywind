@@ -24,10 +24,10 @@ from datetime import datetime
 
 try:
     from urllib import urlencode
-    from urllib2 import HTTPCookieProcessor, HTTPSHandler, build_opener, urlopen
+    from urllib2 import HTTPCookieProcessor, HTTPSHandler, build_opener, urlopen, URLError
     from cookielib import CookieJar
 except ImportError:
-    from urllib.request import HTTPCookieProcessor, HTTPSHandler, build_opener, urlopen
+    from urllib.request import HTTPCookieProcessor, HTTPSHandler, build_opener, urlopen, URLError
     from urllib.parse import urlencode
     from http.cookiejar import CookieJar
 
@@ -105,8 +105,10 @@ class HttpsWithCookies(object):
         self.opener = build_opener(cookie_handler, httpsHandler)
 
     def open(self, url, data=None):
-        return self.opener.open(url, data)
-
+        try:
+            return self.opener.open(url, data)
+        except URLError:
+            return None
 
 def get_url(url, data=None):
     """ Perform a simple GET request, optionally using the supplied data.

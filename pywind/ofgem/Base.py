@@ -20,6 +20,7 @@ import urllib
 import html5lib
 
 from lxml import etree
+from pywind.ofgem.utils import HttpsWithCookies
 
 
 def get_and_set_from_xml(obj, element, attrs=[]):
@@ -362,8 +363,7 @@ class OfgemForm(object):
             return False
 
         docresp = self.web.open(data_url)
-
-        if docresp.code != 200:
+        if docresp is None or docresp.code != 200:
             return False
 
         self.data = docresp.read()

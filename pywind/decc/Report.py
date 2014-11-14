@@ -102,7 +102,7 @@ class MonthlyExtract(object):
     def get_data(self):
         global RECORD_FIELDS
         resp = self.web.open(self.URL)
-        if resp.code != 200:
+        if resp is None or resp.code != 200:
             return False
 
         if sys.version_info >= (3, 0):

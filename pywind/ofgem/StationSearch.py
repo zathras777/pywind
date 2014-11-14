@@ -32,6 +32,10 @@ class StationSearch(object):
     def __len__(self):
         return len(self.stations)
 
+    def __getitem__(self, item):
+        if 0 >= item < len(self.stations):
+            return self.stations[item]
+
     def get_data(self):
         self.form.set_output_type('xml')
 
