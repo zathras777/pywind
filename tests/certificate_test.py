@@ -1,19 +1,16 @@
 from unittest import TestCase
 
-from pywind.ofgem.Base import *
+from pywind.ofgem.Certificates import Certificates
 from pywind.ofgem.CertificateSearch import CertificateSearch
-from pywind.ofgem.Station import Station
-from pywind.ofgem.StationSearch import StationSearch
 
-import sys
 
-class StationTest(TestCase):
+class CertificateTest(TestCase):
     def test_01(self):
-        ss = StationSearch()
-        ss.filter_name("Caynton")
-        ss.filter_scheme("REGO")
-        self.assertTrue(ss.get_data())
-#print ss.form.data
-        print len(ss)
-        for s in ss.stations:
-            print s.as_string()
+        cs = CertificateSearch()
+        cs.set_period(2013, 1)
+        cs.filter_technology("Wind")
+        cs.filter_scheme('REGO')
+
+        self.assertTrue(cs.get_data())
+        self.assertIsInstance(cs[0], Certificates)
+        self.assertEqual(cs[0].period, 'Jan-2013')

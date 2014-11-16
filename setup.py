@@ -8,6 +8,7 @@ from os import walk, getcwd
 
 
 class TestCommand(Command):
+    description="Run the tests"
     user_options = [ ]
 
     def initialize_options(self):
@@ -29,7 +30,7 @@ class TestCommand(Command):
 
         print("\nThese tests require an internet connection and may take a while.\nPlease be patient.\n")
         tests = TestLoader().loadTestsFromNames(testfiles)
-        t = TextTestRunner(verbosity=1)
+        t = TextTestRunner(verbosity=self.verbose)
         t.run(tests)
 
 
