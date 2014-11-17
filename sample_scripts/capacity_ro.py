@@ -153,7 +153,6 @@ def test(theseargs):
         for scheme in ['RO','REGO']:
             offset = 1 if scheme == 'RO' else 3
             ss = StationSearch()
-            #ss.for_wind()
             ss.filter_scheme(scheme)
             ss.filter_name(s)
             if not ss.get_data():
@@ -197,7 +196,7 @@ def test(theseargs):
             cs.set_finish_year(end_year)
             cs.filter_accreditation(station.accreditation)
             #cs.filter_scheme(scheme) # seems to work ok without this, and REGOs break with it
-            #cs.filter_status(['Revoked','Retired','Expired']) # this doesn't work
+            #cs.filter_status(['Issued','Redeemed','Expired']) # this doesn't work. And arguable whether expired should count
             
             if not cs.get_data():
                 print("Unable to get any certificate data :-(")

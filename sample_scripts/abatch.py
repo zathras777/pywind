@@ -39,8 +39,7 @@ testlist = [
         ['ofgem_certificate_search', [] ],
         ['ofgem_station_search', [] ],
         ['onestation', [] ],
-        # and this one is producing the wrong numbers:
-        #['capacity_ro', ['--name','ormonde','--start','Jan-2014','--end','Apr-2014'] ],
+        ['capacity_ro', ['--name','ormonde','--start','Jan-2014','--end','Apr-2014'] ],
         ]
 
 logmessage("\n\n =================================" +
