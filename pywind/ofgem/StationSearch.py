@@ -37,8 +37,6 @@ class StationSearch(object):
             return self.stations[item]
 
     def get_data(self):
-        self.form.set_output_type('xml')
-
         if self.form.get_data():
             with open("station_search.xml", "w") as fh:
                 fh.write(self.form.data)

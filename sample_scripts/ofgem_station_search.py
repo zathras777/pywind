@@ -30,11 +30,13 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    osd = StationSearch(args.scheme)
+    osd = StationSearch()
     crit = "Searching for Ofgem Stations: scheme %s" % args.scheme
 
+    osd.filter_scheme(args.scheme)
+
     if args.name:
-        osd['station'] = args.name
+        osd.filter_name(args.name)
         crit += ", name = '%s'" % args.name
 
     if args.organisation:
@@ -42,7 +44,11 @@ if __name__ == '__main__':
         crit += ", organisation = '%s'" % args.organisation
 
     if args.accreditation:
-        osd.options[31] = args.accreditation.upper()
+        if args.accreditation.upper()[0] == 'R':
+            osd.filter_scheme('RO')
+        elif args.accreditation.upper()[0] == 'G':
+            osd.filter_scheme('REGO')
+        osd.filter_accreditation(args.accreditation.upper())
         crit += ", accreditation number = '%s'" % args.accreditation.upper()
 
     print crit

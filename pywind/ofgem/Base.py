@@ -34,7 +34,7 @@ def get_and_set_from_xml(obj, element, attrs=[]):
 class OfgemField(object):
     def __init__(self, el):
         self.options = []
-        self.label = ''
+        self.label = None
         self.tag = el.tag
         self.postback = False
         get_and_set_from_xml(self, el, ['id', 'name', 'type',
@@ -87,11 +87,15 @@ class OfgemField(object):
         if self.tag == 'select':
             for o in self.options:
                 o.selected = (o.value == val)
+                if o.selected:
+                    self.value = o.value
 
     def set_value_by_label(self, val):
         if self.tag == 'select':
             for o in self.options:
                 o.selected = (o.label == val)
+                if o.selected:
+                    self.value = o.value
 
     def set_values(self, vals):
         for opt in self.options:
@@ -122,6 +126,7 @@ class OfgemField(object):
         elif self.type == 'checkbox':
             if self.checked:
                 f['value'] = 'on'
+                f['checked'] = 'checked'
                 rv.append(f)
         else:
             if len(self.options) == 0:
@@ -162,6 +167,7 @@ class OfgemForm(object):
     """
 
     SITE_URL = 'https://www.renewablesandchp.ofgem.gov.uk/Public/'
+
     def __init__(self, endpoint):
         self.web = HttpsWithCookies()
         self.action = None
@@ -180,17 +186,31 @@ class OfgemForm(object):
         """
         for row in root.xpath("//tr[@isparameterrow='true']"):
             tds = row.xpath("td")
+
             for i in range(0, len(tds), 3):
-                label = tds[i].xpath('span')[0].text
+                # We expect these to be
+                # <td>
+                #  <label for="ReportViewer_ctl04_ctl03_txtValue">
+                #    <span>
+                #      <font size="1" face="Verdana">Scheme:</font>
+                #    </span>
+                #  </label>
+                # </td>
+                label = tds[i].xpath('.//span')[0].text
                 if label is None:
-                    label = tds[i].xpath('span//font')[0].text
-                _id = tds[i + 1].xpath('span')[0].get('id')
-                if _id is None:
-                    _id = tds[i + 1].xpath('span//font')[0].getchildren()[0].get('id')
-                if _id is not None:
-                    if not _id.endswith('ctl00'):
-                        _id += '$ctl00'
-                    self.field_labels[_id.replace('_', '$')] = label
+                    label = tds[i].xpath('.//span//font')[0].text
+
+                inps = tds[i + 1].xpath(".//input[@type='text']")
+                sels = tds[i + 1].xpath(".//select")
+
+                if len(inps) == 0 and len(sels) == 0:
+                    continue
+                if len(inps) > 0:
+                    _id = inps[0].get('id')
+                else:
+                    _id = sels[0].get('id')
+
+                self.field_labels[_id.replace('_', '$')] = label
 
     def get_form(self, _url):
         """ get_form() is used to request the initial form. Subsequent
@@ -212,25 +232,26 @@ class OfgemForm(object):
                 continue
 
             of = OfgemField(inp)
+            if of.id is not None:
 
-            if len(of.id) > 30:
-                # is it likely to be a multi value field input choice?
-                if of.id[25:30] == "ctl03":
-                    # multi value field input choice...
-                    lbls = form[0].xpath("//label[@for='%s']" % of.id)
-                    if len(lbls) > 0:
-                        of.label = lbls[0].text
-                        if of.label.isdigit():
-                            of.label = int(of.label)
-                    parent = of.id[:25].replace('_', '$') + 'ctl00'
-                    if parent in self.fields:
-                        self.fields[parent].options.append(of)
-                    else:
-                        print("Unknown parent...", parent)
+                if len(of.id) > 30:
 
-            else:
-                if of.type != 'radio' or not of.name in self.fields:
-                    self.fields[of.name] = of
+                    # is it likely to be a multi value field input choice?
+                    if of.id[25:30] == "ctl03":
+                        # multi value field input choice...
+                        lbls = form[0].xpath("//label[@for='%s']" % of.id)
+                        if len(lbls) > 0:
+                            of.label = lbls[0].text
+                            if of.label.isdigit():
+                                of.label = int(of.label)
+                        parent = of.id[:25].replace('_', '$') + 'ctl00'
+                        if parent in self.fields:
+                            self.fields[parent].options.append(of)
+                        else:
+                            print("Unknown parent...", parent)
+
+            if of.type != 'radio' or not of.name in self.fields:
+                self.fields[of.name] = of
 
         selects = form[0].xpath("//select")
         for s in selects:
@@ -244,7 +265,7 @@ class OfgemForm(object):
                 of.options.append(oo)
 
         for fld in self.fields.values():
-            fld.set_postback_flag();
+            fld.set_postback_flag()
 
     def _get_or_create_field(self, name):
         if name in self.fields:
@@ -299,17 +320,19 @@ class OfgemForm(object):
         return post_data
 
     def set_output_type(self, what):
-        try:
-            fld = self.fields['ReportViewer$ctl01$ctl05$ctl00']
-        except KeyError:
-            return False
-
-        for opt in fld.options:
-            if opt.value.lower() == what.lower():
-                fld.set_value(opt.value)
-                self.update_validation(fld.name)
-                break
         return True
+
+#        try:
+#            fld = self.fields['ReportViewer$ctl01$ctl05$ctl00']
+#        except KeyError:
+#            return False
+
+#        for opt in fld.options:
+#            if opt.value.lower() == what.lower():
+#                fld.set_value(opt.value)
+#                self.update_validation(fld.name)
+#                break
+#        return True
 
     def update_validation(self, name):
         self._get_or_create_field('__EVENTTARGET').value = name
@@ -339,26 +362,39 @@ class OfgemForm(object):
 
         return document.getroot()
 
+    def set_page_size(self, n=25):
+        fld = self._find_field_by_label('Page Size')
+        if fld is None:
+            return
+        fld.set_value_by_label(n)
+        self.update_validation(fld.name)
+
     def get_data(self):
-        self._get_or_create_field('__EVENTTARGET').value = 'ReportViewer$ctl00$ctl05'
+        self.set_page_size()
+
+        self._get_or_create_field('__EVENTTARGET').value = 'ReportViewer$ctl04$ctl00'
         root = self._get_form_document()
         if root is None:
             return False
 
+#        with open("ofgem.html", 'w') as fh:
+#            fh.write(etree.tostring(root, pretty_print=True))
+
         data_url = None
         for script in root.xpath("//script"):
+
             if script.text is None:
                 continue
-            if "RSToolbar(" in script.text:
-                ck = re.search("new RSToolbar\((.*)\);", script.text)
-                if ck is None:
-                    return False
+            if "ReportSession" in script.text:
+                for cmd in script.text.split("Sys.Application.add_init"):
+                    if not "_InternalReportViewer" in cmd:
+                        continue
+                    exp = re.search(r'\"ExportUrlBase\":\"(.*?)\"', cmd)
+                    if exp is None:
+                        return False
+                    data_url = self.SITE_URL + exp.group(1) + 'XML'
+                    break
 
-                data_url = ck.group(1).split(',')[-2].replace('"', '').strip()
-                if not data_url.startswith('http'):
-                    data_url = self.SITE_URL + data_url + \
-                               self.fields['ReportViewer$ctl01$ctl05$ctl00'].option_value()
-                break
         if data_url is None:
             return False
 
@@ -373,15 +409,12 @@ class OfgemForm(object):
         if docresp.headers['content-type'] == 'text/plain':
             # data is sent as utf-16, so convert to utf-8
             self.data = self.data.decode('utf-16').encode('utf-8')
-
         return True
 
     def _find_field_by_label(self, lbl):
         for k, v in self.field_labels.iteritems():
             if lbl.lower() in v.lower():
-                if k in self.fields:
-                    return self.fields[k]
-                return None
+                return self.fields.get(k)
         return None
 
     def add_filter(self, what, val):
@@ -390,6 +423,11 @@ class OfgemForm(object):
         rv = False
         fld = self._find_field_by_label(what)
         if fld is not None:
+            if fld.name.endswith('txtValue'):
+                cb = self.fields.get(fld.name.replace('txtValue', 'cbNull'))
+                if cb is not None:
+                    cb.set_value(False)
+
             if len(fld.options) == 0:
                 fld.value = val
                 rv = True

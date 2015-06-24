@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 import argparse
 from datetime import datetime
 from pywind.ofgem.CertificateSearch import CertificateSearch
@@ -39,14 +40,16 @@ if __name__ == '__main__':
         ocs.set_year(args.year)
         crits.append('year %s' % args.year)
     if args.scheme:
-        ocs.set_scheme(args.scheme)
+        ocs.filter_scheme(args.scheme)
         crits.append('scheme %s' % args.scheme)
 
     if args.accreditation:
-        ocs['accreditation_no'] = args.accreditation.upper()
+        ocs.filter_accreditation(args.accreditation.upper())
         crits.append("accreditation number '%s'" % args.accreditation.upper())
 
     print crit + ", ".join(crits)
-    ocs.dump_post_data()
     ocs.get_data()
     print "Total of %d records returned" % len(ocs)
+
+    for cert in ocs.certificates:
+        print(cert.as_string())
