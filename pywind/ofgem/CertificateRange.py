@@ -132,8 +132,12 @@ class CertificateTree(object):
             self.owner = owner
             self.factor = factor
 
+        def __str__(self):
+            print("CertificateNode: {}, {}, {}, {}".format(self.value, self.left, self.right, self.owner))
+
     def __init__(self):
         self.top_node = None
+        self.flattened_nodes = None
         self.ranges = []
         self.center = 0
 
@@ -158,6 +162,62 @@ class CertificateTree(object):
             return 0
         return self.ranges[-1].finish
 
+    def find_nodes_by_range(self, start, finish):
+        results = []
+        self._scan(self.top_node, start, finish, results)
+        return results
+
+    def get_final_ranges(self, node=None):
+        if self.flattened_nodes is None:
+            self.flattened_nodes = self._flatten()
+        ranges = []
+        owners = []
+        r = None
+
+        if len(self.flattened_nodes) == 0:
+            return 0
+
+        for n in sorted(self.flattened_nodes):
+            v = self.flattened_nodes[n]
+            if v:
+                if r is None:
+                    r = CertificateRange(n, n, v['owner'], v['factor'])
+                    owners.append(v['owner'])
+                elif r.owner == v:
+                    r.finish = n
+                elif len(owners) > 0:
+                    start = n
+                    if len(owners) > 1 and v == owners[-2]:
+                        start = r.finish + 1
+                        owners = owners[:-1]
+                    else:
+                        r.finish = n - 1
+                        owners.append(v['owner'])
+                    ranges.append(r)
+                    r = CertificateRange(start, n, v['owner'], v['factor'])
+
+            elif r is not None:
+                ranges.append(r)
+                r = None
+                owners = []
+
+        if r is not None:
+            ranges.append(r)
+        return ranges
+
+    def final_output(self):
+        if self.flattened_nodes is None:
+            self.flattened_nodes = self._flatten()
+
+        if len(self.flattened_nodes) == 0:
+            return 0
+
+        for n in sorted(self.flattened_nodes):
+            v = self.flattened_nodes[n]
+            print(v)
+
+
+
     def _insert(self, value, node):
         if node.value == value:
             return
@@ -179,11 +239,6 @@ class CertificateTree(object):
             self._scan(node.left, start, finish, results)
         if node.right and finish > node.value:
             self._scan(node.right, start, finish, results)
-
-    def find_nodes_by_range(self, start, finish):
-        results = []
-        self._scan(self.top_node, start, finish, results)
-        return results
 
     def _build_tree(self):
         """ Actually build the tree. Start by adding the center node
@@ -215,40 +270,6 @@ class CertificateTree(object):
         nodes = {}
         if self.top_node is not None:
             self._add_nodes(self.top_node, nodes)
+        for n in nodes.values():
+            print(str(n))
         return nodes
-
-    def get_final_ranges(self, node = None):
-        nodes = self._flatten()
-        ranges = []
-        owners = []
-        r = None
-
-        if len(nodes) == 0:
-            return ranges
-
-        for n in sorted(nodes):
-            v = nodes[n]
-            if v:
-                if r is None:
-                    r = CertificateRange(n, n, v['owner'], v['factor'])
-                    owners.append(v['owner'])
-                elif r.owner == v:
-                    r.finish = n
-                elif len(owners) > 0:
-                    start = n
-                    if len(owners) > 1 and v == owners[-2]:
-                        start = r.finish + 1
-                        owners = owners[:-1]
-                    else:
-                        r.finish = n - 1
-                        owners.append(v['owner'])
-                    ranges.append(r)
-                    r = CertificateRange(start, n, v['owner'], v['factor'])
-
-            elif r is not None:
-                ranges.append(r)
-                r = None
-                owners = []
-        if r is not None:
-            ranges.append(r)
-        return ranges

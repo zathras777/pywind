@@ -90,6 +90,9 @@ class DeccRecord(object):
 
 
 class MonthlyExtract(object):
+    'https://www.gov.uk/government/collections/renewables-statistics'
+    #https://www.gov.uk/government/uploads/system/uploads/attachment_data/file/434482/Public_Database_-_May_2015.xlsx
+
     URL = "https://restats.decc.gov.uk/app/reporting/decc/monthlyextract/style/csv/csvwhich/reporting.decc.monthlyextract"
 
     def __init__(self):

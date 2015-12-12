@@ -38,8 +38,8 @@ class StationSearch(object):
 
     def get_data(self):
         if self.form.get_data():
-            with open("station_search.xml", "w") as fh:
-                fh.write(self.form.data)
+#            with open("station_search.xml", "w") as fh:
+#                fh.write(self.form.data)
 
             data_str = self.form.data.replace("&#0xD;", ", ")
             doc = etree.fromstring(data_str)
@@ -56,7 +56,7 @@ class StationSearch(object):
         return self.form.add_filter("scheme", scheme.upper())
 
     def filter_name(self, name):
-        return self.form.set_text_value("Generating Station Search", name)
+        return self.form.set_value("generating station search", name)
 
     def filter_accreditation(self, accno):
-        return self.form.set_text_value("Accreditation Search", accno)
+        return self.form.set_value("accreditation search", accno)

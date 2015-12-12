@@ -101,7 +101,7 @@ class HttpsWithCookies(object):
     def __init__(self):
         self.cookieJar = CookieJar()
         cookie_handler = HTTPCookieProcessor(self.cookieJar)
-        httpsHandler = HTTPSHandler(debuglevel = 0)
+        httpsHandler = HTTPSHandler(debuglevel=5)
         self.opener = build_opener(cookie_handler, httpsHandler)
 
     def open(self, url, data=None):

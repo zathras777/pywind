@@ -30,10 +30,12 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    print("Preparing search...")
     osd = StationSearch()
+
     crit = "Searching for Ofgem Stations: scheme %s" % args.scheme
 
-    osd.filter_scheme(args.scheme)
+#    osd.filter_scheme(args.scheme)
 
     if args.name:
         osd.filter_name(args.name)
@@ -55,6 +57,6 @@ if __name__ == '__main__':
     if osd.get_data():
         print "Query returned %d results" % len(osd)
         for s in osd.stations:
-            print s.as_string()
+            print s.as_string() + "\n"
     else:
         print "No stations were returned"

@@ -26,30 +26,58 @@ if __name__ == '__main__':
     parser.add_argument('--year', type=int, default=2012, action='store', help='Year')
     parser.add_argument('--accreditation', action='store', help='Accreditation number to search for')
     parser.add_argument('--scheme', action='store', help='Scheme to search (defaults to RO and REGO)')
+    parser.add_argument('--filename', action='store', help='Filename to parse')
 
     args = parser.parse_args()
 
-    ocs = CertificateSearch()
+    if args.filename is None:
+        print("Preparing to search.")
+        ocs = CertificateSearch()
 
-    crit = "Searching Ofgem Certificates: "
-    crits = []
-    if args.month:
-        ocs.set_month(args.month)
-        crits.append('month %s' % args.month)
-    if args.year:
-        ocs.set_year(args.year)
-        crits.append('year %s' % args.year)
-    if args.scheme:
-        ocs.filter_scheme(args.scheme)
-        crits.append('scheme %s' % args.scheme)
+        crit = "Searching Ofgem Certificates: "
+        crits = []
 
-    if args.accreditation:
-        ocs.filter_accreditation(args.accreditation.upper())
-        crits.append("accreditation number '%s'" % args.accreditation.upper())
+        if args.month:
+            ocs.set_month(args.month)
+            crits.append('month %s' % args.month)
 
-    print crit + ", ".join(crits)
-    ocs.get_data()
-    print "Total of %d records returned" % len(ocs)
+        if args.year:
+            ocs.set_year(args.year)
+            crits.append('year %s' % args.year)
 
-    for cert in ocs.certificates:
-        print(cert.as_string())
+        if args.scheme:
+            ocs.filter_scheme(args.scheme)
+            crits.append('scheme %s' % args.scheme)
+
+        if args.accreditation:
+            ocs.filter_accreditation(args.accreditation.upper())
+            crits.append("accreditation number '%s'" % args.accreditation.upper())
+
+        print("Searching Ofgem Certificates: {}".format(", ".join(crits)))
+
+    #    ocs.output_fn = 'certificates.xml'
+        ocs.get_data()
+    else:
+        ocs = CertificateSearch(filename=args.filename)
+
+    print("Total of %d records returned" % len(ocs))
+
+    for cert in ocs.stations():
+        if 'REGO' in cert and len(cert['REGO']) == 1:
+            continue
+        if 'RO' in cert and len(cert['RO']) == 1:
+            continue
+
+#        print(cert)
+        print("{:16s}: {}".format(cert['accreditation'], cert['name']))
+#        print(cert.as_string())
+#        if 'REGO' in cert:
+#            print("REGO:")
+#            for c in cert['REGO']:
+#                print(c.as_string())
+#            print("\n")
+#        if 'RO' in cert:
+#            print("RO:")
+#            for c in cert['RO']:
+#                print(c.as_string())
+#            print("\n")
