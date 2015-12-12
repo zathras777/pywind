@@ -1,2 +1,2 @@
 __all__ = ['bmreports', 'decc', 'ofgem', 'roc']
-__version__ = '0.9.4'
+__version__ = '0.9.5'
