@@ -1,6 +1,6 @@
 # coding=utf-8
 #
-# Copyright 2013 david reid <zathrasorama@gmail.com>
+# Copyright 2013-2015 david reid <zathrasorama@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -38,25 +38,21 @@ class StationSearch(object):
 
     def get_data(self):
         if self.form.get_data():
-#            with open("station_search.xml", "w") as fh:
-#                fh.write(self.form.data)
-
-            data_str = self.form.data.replace("&#0xD;", ", ")
-            doc = etree.fromstring(data_str)
+#            data_str = self.form.data.replace("&#0xD;", ", ")
+            doc = etree.fromstring(self.form.data)
             for detail in doc.xpath("//*[local-name()='Detail']"):
                 self.stations.append(Station(detail))
-
             return True
         return False
 
     def filter_technology(self, what):
-        return self.form.add_filter("technology", what)
+        return self.form.set_value("technology", what)
 
     def filter_scheme(self, scheme):
-        return self.form.add_filter("scheme", scheme.upper())
+        return self.form.set_value("scheme", scheme.upper())
 
     def filter_name(self, name):
         return self.form.set_value("generating station search", name)
 
-    def filter_accreditation(self, accno):
+    def filter_generator_id(self, accno):
         return self.form.set_value("accreditation search", accno)

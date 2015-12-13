@@ -15,6 +15,12 @@ open source module in the hope that it can help others.
 
 http://www.variablepitch.co.uk/
 
+Important Changes
+-----------------
+From version 0.9.6 onwards the Station object 'accreditation' field is now
+more accurately named 'generator_id'.
+
+
 Electricity Usage
 -----------------
 

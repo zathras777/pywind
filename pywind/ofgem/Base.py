@@ -279,6 +279,8 @@ class OfgemForm(object):
         if r.status_code != 200:
             raise
         self.data = r.content
+        with open("report.xml", "w") as fh:
+            fh.write(r.content)
         return True
 
     #
