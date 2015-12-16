@@ -1,6 +1,6 @@
 # coding=utf-8
 #
-# Copyright 2013 david reid <zathrasorama@gmail.com>
+# Copyright 2013-2015 david reid <zathrasorama@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,11 +17,12 @@
 
 from datetime import datetime
 from lxml import etree
+from pywind.ofgem.Base import set_attr_from_xml, to_string, as_csv
 from pywind.ofgem.CertificateRange import CertificateTree, CertificateRange
 
 
 class Certificates(object):
-    FIELDS = ['accreditation', 'name','capacity','scheme','country',
+    FIELDS = ['generator_id', 'name','capacity','scheme','country',
               'technology','output','period','certs',
               'start_no','finish_no','factor','issue_dt',
               'status','status_dt','current_holder','reg_no']
@@ -31,7 +32,7 @@ class Certificates(object):
         """
 
         mapping = [
-            ['textbox4', 'accreditation'],
+            ['textbox4', 'generator_id'],
             ['textbox13', 'name'],
             ['textbox5', 'scheme'],
             ['textbox19', 'capacity', 0],
@@ -50,25 +51,17 @@ class Certificates(object):
             ['textbox45', 'reg_no']
         ]
 
-        def set_attr_from_xml(obj, node, mapping):
-            val = node.get(mapping[0], None)
-            if val is not None and val.isdigit():
-                val = int(val)
-            if val is None and len(mapping) == 3:
-                val = mapping[2]
-            setattr(obj, mapping[1], val)
-
         for m in mapping:
-            set_attr_from_xml(self, node, m)
+            set_attr_from_xml(self, node, m[0], m[1])
 
         self.factor = float(self.factor)
         self.certs = int(self.certs) or 0
         self.capacity = float(self.capacity) or 0
-        self.issue_dt = datetime.strptime(self.issue_dt, '%Y-%m-%dT%H:%M:00').date()
-        self.status_dt = datetime.strptime(self.status_dt, '%Y-%m-%dT%H:%M:00').date()
+        self.issue_dt = datetime.strptime(self.issue_dt.decode(), '%Y-%m-%dT%H:%M:00').date()
+        self.status_dt = datetime.strptime(self.status_dt.decode(), '%Y-%m-%dT%H:%M:00').date()
 
-        if self.period.startswith("01"):
-            dt = datetime.strptime(self.period[:10], '%d/%m/%Y')
+        if self.period.startswith(b"01"):
+            dt = datetime.strptime(self.period[:10].decode(), '%d/%m/%Y')
             self.period = dt.strftime("%b-%Y")
 
     @property
@@ -84,9 +77,10 @@ class Certificates(object):
         return int(self.finish_no[10:10 + self.digits])
 
     def as_string(self):
-        s = '\n'
+        print("Certificate.as_string()")
+        s = ''
         for f in self.FIELDS:
-            s += "    %-30s: %s\n" % (f.capitalize(), getattr(self, f))
+            s += "    %-30s: %s\n" % (f.capitalize(), to_string(self, f))
         return s
 
     def as_range(self):
@@ -98,13 +92,16 @@ class Certificates(object):
     def as_list(self):
         return [getattr(self, f) for f in self.FIELDS]
 
+    def as_csvrow(self):
+        return [as_csv(self, f) for f in self.FIELDS]
+
     def output_summary(self):
         perc = (float(self['certs']) / self['capacity']) * 100
         return "%s: %s   %s vs %s => %.02f%%" % (self['period'], self['name'], self['certs'],
                                                  self['capacity'], perc)
 
 
-class StationCertificates(object):
+class CertificateStation(object):
     """ We are normally interested in knowing about certificates issued to
         a station, so this class attempts to simplify this process.
         Once issued all certificates will be accounted for, but the final
@@ -112,8 +109,10 @@ class StationCertificates(object):
         Certificate objects and simplify them into a final set, with ownership
         and status correctly attributed.
     """
-    def __init__(self):
-        self.certs = []
+    def __init__(self, name, g_id):
+        self.name = name
+        self.generator_id = g_id
+        self.certs = {}
 
     def __len__(self):
         return len(self.certs)
@@ -122,32 +121,58 @@ class StationCertificates(object):
         for c in self.certs:
             yield c
 
+    @property
+    def has_rego(self):
+        return b'REGO' in self.certs
+
+    @property
+    def has_ro(self):
+        return b'RO' in self.certs
+
     def add_cert(self, cert):
-        self.certs.append(cert)
+        self.certs.setdefault(cert.scheme, []).append(cert)
+
+    def get_certs(self, scheme):
+        for c in self.certs.get(scheme, []):
+            yield c
+
+    @classmethod
+    def csv_title_row(cls):
+        titles = []
+        for f in Certificates.FIELDS:
+            titles.append(" ".join([x.capitalize() for x in f.split(' ')]))
+        return titles
+
+    def as_csvrow(self):
+        rows = []
+        for s in sorted(self.certs):
+            rows.extend([c.as_csvrow() for c in self.certs[s]])
+        return rows
 
     def finalise(self):
-        final = []
-        start = finish = -1
-        overlaps = 0
-        # Go through certificate records in order of status_dt.
-        for c in sorted(self.certs, key=lambda x: "{}{}".format(x.status_dt, x.start)):
-#            print("{} [{}]: {}: {} - {} -- {}".format(c.name, c.scheme, c.status_dt, c.start, c.finish, c.status))
-            if start == -1:
-                start = c.start
-                finish = c.finish
-            else:
-                if c.start < finish and c.finish > start:
-                    overlaps += 1
+        for scheme in self.certs:
+            final = []
+            start = finish = -1
+            overlaps = 0
+            # Go through certificate records in order of status_dt.
+            for c in sorted(self.certs[scheme], key=lambda x: "{}{}".format(x.status_dt, x.start)):
+#               print("{} [{}]: {}: {} - {} -- {}".format(c.name, c.scheme, c.status_dt, c.start, c.finish, c.status))
+                if start == -1:
+                    start = c.start
+                    finish = c.finish
+                else:
+                    if c.start < finish and c.finish > start:
+                        overlaps += 1
 #                    print("OVERLAP!!! {} [{}] ({}-{} vs {}-{})".format(c.name, c.scheme, c.start, c.finish, start, finish))
     #                for cc in self.certs:
     #                    print("{}: {} - {} -- {}".format(cc.status_dt, cc.start, cc.finish, cc.status))
 
-                if c.finish > finish:
-                    finish = c.finish
-                if c.start < start:
-                    start = c.start
-        if overlaps > 0:
-            print("OVERLAPS: {} [{}]".format(self.certs[0].name, self.certs[0].scheme))
+                    if c.finish > finish:
+                        finish = c.finish
+                    if c.start < start:
+                        start = c.start
+            if overlaps > 0:
+                print("OVERLAPS: {} [{}] x {}".format(self.name, scheme, overlaps))
 
 #            if ranges == []:
 #                ranges.append(())
@@ -185,12 +210,9 @@ class CertificatesList(object):
     def _collate_stations(self):
         for c in self.certificates:
             if c.name not in self.station_data:
-                self.station_data[c.name] = {'accreditation': c.accreditation, 'name': c.name}
-#            self.station_data[c.name].setdefault(c.scheme, CertificateTree()).add_range(c.as_range())
-            self.station_data[c.name].setdefault(c.scheme, StationCertificates()).add_cert(c)
+                self.station_data[c.name] = CertificateStation(c.name, c.generator_id)
+            self.station_data[c.name].add_cert(c)
 
         # finalise...
         for s in self.station_data:
-            for ss in ['REGO', 'RO']:
-                if ss in self.station_data[s]:
-                    self.station_data[s][ss].finalise()
+            self.station_data[s].finalise()

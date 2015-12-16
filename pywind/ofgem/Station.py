@@ -17,6 +17,7 @@
 
 import sys
 from datetime import datetime
+from pywind.ofgem.Base import set_attr_from_xml
 
 
 def fix_address(addr):
@@ -64,9 +65,9 @@ class Station(object):
     def __init__(self, node):
         for m in self.mapping:
             if len(m) == 1:
-                self.set_attr_from_xml(node, m[0], m[0].lower())
+                set_attr_from_xml(self, node, m[0], m[0].lower())
             else:
-                self.set_attr_from_xml(node, m[0], m[1])
+                set_attr_from_xml(self, node, m[0], m[1])
 
         # Now tidy up and ajust a few formats...
         if self.capacity is not None:
@@ -81,20 +82,6 @@ class Station(object):
         # catch/correct some odd results I have observed...
         if self.technology is not None and b'\n' in self.technology:
             self.technology = self.technology.split(b'\n')[0]
-
-    def set_attr_from_xml(self, node, attr, name):
-        val = node.get(attr, None)
-        if val in [None, '']:
-            val = None
-        else:
-            val = val.strip().encode('utf-8')
-            if len(val) == 0:
-                val = None
-            else:
-                # Yes, Ofgem data really did have a station name wrapped in single quotes...
-                if val[0] == b"'" and val[-1] == b"'":
-                    val = val[1:-1]
-        setattr(self, name, val)
 
     def as_string(self):
         """ Mainly used for command line tools... """

@@ -76,10 +76,13 @@ options possible with the webform are unusable in many browsers.
 
 Classes are provided to search the Certifcates and Stations databases.
 
-
-
+Searching
+---------
 The module provides the StationSearch and CertificateSearch classes that can
 be used to search the Ofgem database.
+
+NB NB NB When setting the month/year these should be done after other parameters have been
+         set due to the interaction of the form and the module.
 
 e.g. Searching for stations with Novar in their name
 
@@ -121,7 +124,13 @@ e.g. Getting all certificates issued to Off-Shore wind farms during Jan 2012
 True
 >>> len(cs)
 76
->>> print cs.certificates[0].as_string()
+```
+
+The results show that certifcate data for 76 stations has been returned.
+
+To show certificate data, you need to use the scheme for each station, i.e.
+```
+>>> print cs.stations()[0]['REGO'][0].as_string()
 
     Accreditation                 : G01164FWEN
     Name                          : Ormonde Wind Farm
@@ -141,6 +150,9 @@ True
     Current_holder                : Vattenfall Energy Trading GmbH
     Reg_no                        : HRB 80335
 ```
+
+While accessing the data may be slightly harder than in previous versions, it
+is far easier to understand and manipulate.
 
 More information about the information available can be found at
 http://www.ofgem.gov.uk/Pages/OfgemHome.aspx

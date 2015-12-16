@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+import copy
 
 from .Base import OfgemForm
 from pywind.ofgem.Station import Station
@@ -38,10 +38,19 @@ class StationSearch(object):
 
     def get_data(self):
         if self.form.get_data():
-#            data_str = self.form.data.replace("&#0xD;", ", ")
             doc = etree.fromstring(self.form.data)
+            # There are a few stations with multiple generator id's, separated by '\n' so
+            # capture them and add each as a separate entry.
             for detail in doc.xpath("//*[local-name()='Detail']"):
-                self.stations.append(Station(detail))
+                st = Station(detail)
+                if b'\n' in st.generator_id:
+                    ids = [x.strip() for x in st.generator_id.split(b'\n')]
+                    st.generator_id = ids[0]
+                    for _id in ids[1:]:
+                        _st = copy.copy(st)
+                        _st.generator_id = _id
+                        self.stations.append(_st)
+                self.stations.append(st)
             return True
         return False
 

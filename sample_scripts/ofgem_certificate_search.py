@@ -16,68 +16,80 @@
 # limitations under the License.
 #
 
+# Dec 2015 Changes
+#
+# - year now defaults to current year
+# - accreditation changed to generator_id
+# - order of filtering updated to avoid conflicts
+# - updated output for new object structure
+
 import argparse
+import csv
 from datetime import datetime
+from pywind.ofgem.Base import to_string
 from pywind.ofgem.CertificateSearch import CertificateSearch
+from pywind.ofgem.Certificates import CertificateStation
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Get ofgem certificates for a given month & year')
-    parser.add_argument('--month', type=int, default=1, action='store', help='Month')
-    parser.add_argument('--year', type=int, default=2012, action='store', help='Year')
-    parser.add_argument('--accreditation', action='store', help='Accreditation number to search for')
+    parser.add_argument('--month', type=int, default=1, action='store', help='Month (as a number)')
+    parser.add_argument('--year', type=int, default=datetime.today().year, action='store', help='Year')
+    parser.add_argument('--generator', action='store', help='Generator ID to search for')
     parser.add_argument('--scheme', action='store', help='Scheme to search (defaults to RO and REGO)')
     parser.add_argument('--filename', action='store', help='Filename to parse')
+    parser.add_argument('--output', action='store', help='Filename to store output in (as CVS)')
 
     args = parser.parse_args()
 
     if args.filename is None:
-        print("Preparing to search.")
+        print("Contacting Ofgem and preparing to search.\n")
         ocs = CertificateSearch()
 
         crit = "Searching Ofgem Certificates: "
         crits = []
 
+        if args.scheme:
+            ocs.filter_scheme(args.scheme)
+            crits.append('\n\tscheme %s' % args.scheme)
+
+        if args.generator:
+            ocs.filter_generator_id(args.generator.upper())
+            crits.append("\n\tgenerator id is '%s'" % args.generator.upper())
+
         if args.month:
             ocs.set_month(args.month)
-            crits.append('month %s' % args.month)
+            crits.append('\n\tmonth %s' % args.month)
 
         if args.year:
             ocs.set_year(args.year)
-            crits.append('year %s' % args.year)
+            crits.append('\n\tyear %s' % args.year)
 
-        if args.scheme:
-            ocs.filter_scheme(args.scheme)
-            crits.append('scheme %s' % args.scheme)
-
-        if args.accreditation:
-            ocs.filter_accreditation(args.accreditation.upper())
-            crits.append("accreditation number '%s'" % args.accreditation.upper())
-
-        print("Searching Ofgem Certificates: {}".format(", ".join(crits)))
-
-    #    ocs.output_fn = 'certificates.xml'
+        print("Searching Ofgem for certificates matching:{}\n".format(", ".join(crits)))
         ocs.get_data()
     else:
         ocs = CertificateSearch(filename=args.filename)
 
     print("Total of %d records returned" % len(ocs))
 
-    for cert in ocs.stations():
-        if 'REGO' in cert and len(cert['REGO']) == 1:
-            continue
-        if 'RO' in cert and len(cert['RO']) == 1:
-            continue
+    if args.output is None:
+        for station in ocs.stations():
+            print("{:16s}: {}".format(to_string(station, 'generator_id'), to_string(station, 'name')))
+            if station.has_rego:
+                print("  REGO:")
+                for c in station.get_certs(b'REGO'):
+                    print(c.as_string())
+                print("\n")
+            if station.has_ro:
+                print("  RO:")
+                for c in station.get_certs(b'RO'):
+                    print(c.as_string())
+                print("\n")
+    else:
+        with open(args.output, 'wt') as csvfile:
+            csv_writer = csv.writer(csvfile, quoting=csv.QUOTE_NONNUMERIC)
+            csv_writer.writerow(CertificateStation.csv_title_row())
+            for s in ocs.stations():
+#                for r in s.as_csvrow():
+                csv_writer.writerows(s.as_csvrow())
+        print("Output saved to file {} [CSV]".format(args.output))
 
-#        print(cert)
-        print("{:16s}: {}".format(cert['accreditation'], cert['name']))
-#        print(cert.as_string())
-#        if 'REGO' in cert:
-#            print("REGO:")
-#            for c in cert['REGO']:
-#                print(c.as_string())
-#            print("\n")
-#        if 'RO' in cert:
-#            print("RO:")
-#            for c in cert['RO']:
-#                print(c.as_string())
-#            print("\n")

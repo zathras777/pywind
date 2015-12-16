@@ -78,4 +78,4 @@ if __name__ == '__main__':
             print("Output saved to file {} [CSV]".format(output_fn))
 
     else:
-        print "No stations were returned"
+        print("No stations were returned")

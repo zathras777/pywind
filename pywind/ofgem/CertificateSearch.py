@@ -1,7 +1,7 @@
 # coding=utf-8
 
 #
-# Copyright 2013 david reid <zathrasorama@gmail.com>
+# Copyright 2013-2015 david reid <zathrasorama@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -63,10 +63,6 @@ class CertificateSearch(object):
             return 0
         return len(self.cert_list)
 
-#    def __getitem__(self, item):
-#        if 0 >= item < len(self.certificates):
-#            return self.certificates[item]
-
     def set_month(self, m):
         if type(m) is int:
             m = MONTHS[m - 1]
@@ -103,11 +99,11 @@ class CertificateSearch(object):
     def filter_scheme(self, what):
         self.form.set_value('scheme', what.upper())
 
-    def filter_accreditation(self, acc_no):
+    def filter_generator_id(self, acc_no):
         self.form.set_value('accreditation no', acc_no.upper())
 
     def get_data(self):
-        if self.form.get_data() == False:
+        if not self.form.get_data():
             print("Failed to get data.")
             return False
 
@@ -122,10 +118,6 @@ class CertificateSearch(object):
 
     def parse_filename(self, filename):
         self.cert_list = CertificatesList(filename=filename)
-
-#        for detail in doc.xpath(".//[local-name()='Detail']"):
-#            self.certificates.append(Certificates(detail))
-
         return True
 
     def stations(self):

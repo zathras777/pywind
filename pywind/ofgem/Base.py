@@ -21,11 +21,55 @@ from lxml import etree
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.poolmanager import PoolManager
 import ssl
+import sys
 
 try:
     from urllib import quote
 except ImportError:
     from urllib.parse import quote
+
+
+def set_attr_from_xml(obj, node, attr, name):
+    val = node.get(attr, None)
+    if val in [None, '']:
+        val = None
+    else:
+        val = val.strip().encode('utf-8')
+        if len(val) == 0:
+            val = None
+        else:
+            # Yes, Ofgem data really did have a station name wrapped in single quotes...
+            if val[0] == b"'" and val[-1] == b"'":
+                val = val[1:-1]
+    setattr(obj, name, val)
+
+
+def to_string(obj, attr):
+    """ This is long winded, but allows for as_string() to work for both Python 2 & 3 """
+    val = getattr(obj, attr)
+    if val is None:
+        return ''
+    if type(val) is str:
+        return val
+    elif type(val) is int:
+        return str(val)
+    elif type(val) is float:
+        return "{:.02f}".format(val)
+    elif hasattr(val, 'strftime'):
+        return val.strftime("%Y-%m-%d")
+    return val.decode()
+
+
+def as_csv(obj, f):
+    """ Return the given field as a value suitable for inclusion in a CSV file for Python 2 or 3 """
+    val = getattr(obj, f)
+    if sys.version_info >= (3, 0) and type(val) is bytes:
+        return val.decode()
+    return val
+
+
+def as_csv_title(m):
+    return (m[0] if len(m) == 1 else m[1]).capitalize().replace('_', ' ')
 
 
 class OfgemField(object):
@@ -39,6 +83,7 @@ class OfgemField(object):
         self.options = []
         self.postback = False
         self.separator = ','
+        self.dropdown = None
 
         if el is not None:
             self._from_element(el)
@@ -48,9 +93,8 @@ class OfgemField(object):
         self.id = el.get('id')
         self.name = el.get('name')
         if self.type == 'checkbox':
-            self.value = el.get('checked', '') == 'checked'
-        else:
-            self.value = el.get('value')
+            self.checked = True if el.get('checked', '') == 'checked' else False
+        self.value = el.get('value')
         self.disabled = el.get('disabled', '') == 'disabled'
 
     @property
@@ -63,6 +107,8 @@ class OfgemField(object):
     def set_value(self, what):
         if self.has_options:
             self.set_option(what)
+        elif self.dropdown is not None:
+            self.dropdown.set_value(what)
         else:
             self.value = what
 
@@ -102,6 +148,42 @@ class OfgemSelectField(OfgemField):
                 opt.selected = True
             else:
                 opt.selected = False
+
+
+class OfgemDropdown(object):
+    def __init__(self, mgr, fld):
+        """ The fld should point to the $HiddenIndices field. """
+        self.opts = {}
+        self.current = []
+        self.field = fld
+        self.parent = mgr.by_name(fld.name.replace('$divDropDown$ctl01$HiddenIndices', '$txtValue'))
+        if self.parent is None:
+            return
+
+        if fld.value is not None:
+            for i in [int(x) for x in fld.value.split(',')]:
+                opt_name = fld.name.replace('ctl01$HiddenIndices', 'ctl{:02d}'.format(i + 2))
+                opt_fld = mgr.by_name(opt_name)
+                if opt_fld is not None:
+                    self.opts[opt_fld.label] = i
+                    if opt_fld.checked:
+                        self.current.append(opt_fld.label)
+        self.parent.dropdown = self
+        self._set_value()
+
+    def set_value(self, val):
+        """ We expect the val to be one or more of the possible options, i.e. text not indices. """
+        self.current = []
+        for v in [x.strip() for x in val.split(",")]:
+            if v in self.opts:
+                self.current.append(v)
+        self._set_value()
+
+    def _set_value(self):
+        if self.parent is None:
+            return
+        self.parent.value = ",".join(self.current)
+        self.field.value = ",".join([str(self.opts[v]) for v in self.current])
 
 
 class OfgemRadioField(OfgemField):
@@ -177,26 +259,6 @@ class FieldManager(object):
         if fld is not None:
             fld.separator = sep
 
-    def has_dropdown(self, fld):
-        poss = fld.name.replace('$txtValue', '$divDropDown$ctl01$HiddenIndices')
-        return poss in self.names
-
-    def set_dropdown(self, fld, value=None):
-        if fld.value is None:
-            return
-        name = fld.name.replace('$divDropDown$ctl01$HiddenIndices', '$txtValue')
-        the_fld = self.by_name(name)
-        if the_fld is None:
-            return
-        vals = []
-        for i in [int(x) for x in fld.value.split(',')]:
-            opt_name = fld.name.replace('ctl01$HiddenIndices', 'ctl{:02d}'.format(i + 2))
-            opt_fld = self.by_name(opt_name)
-            if opt_fld is not None:
-
-                vals.append(opt_fld.label)
-        the_fld.value_from_list(vals)
-
     def post_data(self):
         """ Generate the data to post to server, as a string.
             NB quote is used as quote_plus fails.
@@ -261,10 +323,7 @@ class OfgemForm(object):
             if cb_obj is not None:
                 cb_obj.value = False
 
-        if self.fields.has_dropdown(fld):
-            self.fields.set_dropdown(fld, what)
-        else:
-            fld.set_value(what)
+        fld.set_value(what)
 
         if fld.postback:
             self._update(fld.name)
@@ -279,8 +338,6 @@ class OfgemForm(object):
         if r.status_code != 200:
             raise
         self.data = r.content
-        with open("report.xml", "w") as fh:
-            fh.write(r.content)
         return True
 
     #
@@ -289,17 +346,51 @@ class OfgemForm(object):
     def _get(self):
         """ Get the form without trying to update it. Used for initial retrieval. """
         try:
-            r = self.session.get(self.url, verify=False)
+            r = self.session.get(self.url)
         except requests.exceptions.SSLError as e:
             raise Exception("SSL Error\n  Error: {}\n    URL: {}".format(e.message[0], self.url))
         except requests.exceptions.ConnectionError:
             raise Exception("Unable to connect to the Ofgem server.\nURL: {}".format(self.url))
 
-        if r.status_code != 200:
-            raise Exception("Unable to get the Ofgem form from '{}'".format(self.url))
-        self.cookies = r.cookies
+        self._process_response(r)
 
-        document = html5lib.parse(r.content,
+    def _update(self, name=''):
+        self.fields.get_or_create('__EVENTTARGET', name)
+        self.fields.get_or_create('ScriptManager1', "ScriptManager1|{}".format(name))
+
+        try:
+            r = self.session.post(self.action,
+                                  cookies=self.cookies,
+                                  headers={'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
+                                  data=self.fields.post_data())
+        except requests.exceptions.SSLError as e:
+            raise Exception("SSL Error\n  Error: {}\n    URL: {}".format(e.message, self.url))
+        except requests.exceptions.ConnectionError:
+            raise Exception("Cannot connect to Ofgem server")
+
+        document = self._process_response(r)
+
+        for nm in ['__VIEWSTATE', '__EVENTVALIDATION']:
+            poss = document.xpath('//input[@name="{}"]'.format(nm))
+            if len(poss) == 1:
+                self.fields.get_or_create(nm, poss[0].get('value'))
+
+        for scr in document.xpath('//script'):
+            if scr.text is None or 'Sys.Application' not in scr.text:
+                continue
+            for js in re.findall(r"Sys.Application.add_init\(function\(\) \{\n(.*)\n\}\);", scr.text):
+                xpb = re.search('\"ExportUrlBase\":\"(.*?)\",', js)
+                if xpb is not None:
+                    self.export_url = xpb.group(1)
+                    if not self.export_url.startswith('http'):
+                        self.export_url = self.OFGEM_BASE + self.export_url
+
+    def _process_response(self, response):
+        if response.status_code != 200:
+            raise Exception("Unable to get the Ofgem form from '{}'\nGot {} expected a 200".format(self.url, response.status_code))
+
+        self.cookies = response.cookies
+        document = html5lib.parse(response.content,
                                   treebuilder="lxml",
                                   namespaceHTMLElements=False)
 
@@ -369,48 +460,12 @@ class OfgemForm(object):
 
         for fld in self.fields:
             if 'HiddenIndices' in fld.name:
-                self.fields.set_dropdown(fld)
+                OfgemDropdown(self.fields, fld)
 
-#        print("\n".join(self.fields.labels.keys()))
         self.fields.get_or_create('ReportViewer$ctl10', 'ltr')
         self.fields.get_or_create('ReportViewer$ctl11', 'standards')
         self.fields.get_or_create('__ASYNCPOST', 'True')
         self.fields.get_or_create('__EVENTARGUMENT')
         self.fields.get_or_create('__LASTFOCUS')
 
-    def _update(self, name=''):
-        self.fields.get_or_create('__EVENTTARGET', name)
-        self.fields.get_or_create('ScriptManager1', "ScriptManager1|{}".format(name))
-
-        try:
-            r = self.session.post(self.action,
-                                  cookies=self.cookies,
-                                  headers={'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
-                                  data=self.fields.post_data())
-        except requests.exceptions.SSLError as e:
-            raise Exception("SSL Error\n  Error: {}\n    URL: {}".format(e.message, self.url))
-        except requests.exceptions.ConnectionError:
-            raise Exception("Cannot connect to Ofgem server")
-
-        if r.status_code != 200:
-            raise Exception("Unable to get the Ofgem form from '{}'".format(self.url))
-
-        document = html5lib.parse(r.content,
-                                  treebuilder="lxml",
-                                  namespaceHTMLElements=False)
-
-        # only update __VIEWSTATE and __EVENTVALIDATION
-        for nm in ['__VIEWSTATE', '__EVENTVALIDATION']:
-            poss = document.xpath('//input[@name="{}"]'.format(nm))
-            if len(poss) == 1:
-                self.fields.get_or_create(nm, poss[0].get('value'))
-
-        for scr in document.xpath('//script'):
-            if scr.text is None or 'Sys.Application' not in scr.text:
-                continue
-            for js in re.findall(r"Sys.Application.add_init\(function\(\) \{\n(.*)\n\}\);", scr.text):
-                xpb = re.search('\"ExportUrlBase\":\"(.*?)\",', js)
-                if xpb is not None:
-                    self.export_url = xpb.group(1)
-                    if not self.export_url.startswith('http'):
-                        self.export_url = self.OFGEM_BASE + self.export_url
+        return document
