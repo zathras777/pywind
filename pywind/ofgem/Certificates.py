@@ -17,20 +17,24 @@
 
 from datetime import datetime
 from lxml import etree
+
 from pywind.ofgem.Base import set_attr_from_xml, to_string, as_csv
-from pywind.ofgem.CertificateRange import CertificateTree, CertificateRange
 
 
 class Certificates(object):
-    FIELDS = ['generator_id', 'name','capacity','scheme','country',
-              'technology','output','period','certs',
-              'start_no','finish_no','factor','issue_dt',
-              'status','status_dt','current_holder','reg_no']
+    """ Certificate Number Fact Sheet
+        https://www.ofgem.gov.uk/sites/default/files/docs/roc_identifier_fact_sheet_dec_2015.pdf
+
+    """
+    FIELDS = ['generator_id', 'name', 'capacity', 'scheme', 'country',
+              'technology', 'output', 'period', 'certs',
+              'start_no', 'finish_no', 'factor', 'issue_dt',
+              'status', 'status_dt', 'current_holder', 'reg_no']
 
     def __init__(self, node):
         """ Extract information from the supplied XML node.
+            The factor figure is MWh per certificate.
         """
-
         mapping = [
             ['textbox4', 'generator_id'],
             ['textbox13', 'name'],
@@ -64,6 +68,10 @@ class Certificates(object):
             dt = datetime.strptime(self.period[:10].decode(), '%d/%m/%Y')
             self.period = dt.strftime("%b-%Y")
 
+    def __str__(self):
+        return "        {}  {}  {:5d}  {}".format(self.issue_dt.strftime("%Y %b %d"), self.start_no,
+                                                  self.certs, self.current_holder)
+
     @property
     def digits(self):
         return 10 if self.scheme == 'REGO' else 6
@@ -76,15 +84,8 @@ class Certificates(object):
     def finish(self):
         return int(self.finish_no[10:10 + self.digits])
 
-    def as_string(self):
-        print("Certificate.as_string()")
-        s = ''
-        for f in self.FIELDS:
-            s += "    %-30s: %s\n" % (f.capitalize(), to_string(self, f))
-        return s
-
-    def as_range(self):
-        return CertificateRange(self.start, self.finish, self.current_holder, self.factor, self.status_dt)
+    def generation_type(self):
+        return self.start_no[-3:-1]
 
     def as_dict(self):
         return {f: getattr(self, f) for f in self.FIELDS}
@@ -97,8 +98,14 @@ class Certificates(object):
 
     def output_summary(self):
         perc = (float(self['certs']) / self['capacity']) * 100
-        return "%s: %s   %s vs %s => %.02f%%" % (self['period'], self['name'], self['certs'],
-                                                 self['capacity'], perc)
+        return "%s: %s   %s vs %s => %.02f%%" % (self.period, self.name, self.certs,
+                                                 self.capacity, perc)
+
+    def as_string(self):
+        s = ''
+        for f in self.FIELDS:
+            s += "    %-30s: %s\n" % (f.capitalize(), to_string(self, f))
+        return s
 
 
 class CertificateStation(object):
@@ -112,6 +119,7 @@ class CertificateStation(object):
     def __init__(self, name, g_id):
         self.name = name
         self.generator_id = g_id
+        self.output = {}
         self.certs = {}
 
     def __len__(self):
@@ -149,37 +157,6 @@ class CertificateStation(object):
             rows.extend([c.as_csvrow() for c in self.certs[s]])
         return rows
 
-    def finalise(self):
-        for scheme in self.certs:
-            final = []
-            start = finish = -1
-            overlaps = 0
-            # Go through certificate records in order of status_dt.
-            for c in sorted(self.certs[scheme], key=lambda x: "{}{}".format(x.status_dt, x.start)):
-#               print("{} [{}]: {}: {} - {} -- {}".format(c.name, c.scheme, c.status_dt, c.start, c.finish, c.status))
-                if start == -1:
-                    start = c.start
-                    finish = c.finish
-                else:
-                    if c.start < finish and c.finish > start:
-                        overlaps += 1
-#                    print("OVERLAP!!! {} [{}] ({}-{} vs {}-{})".format(c.name, c.scheme, c.start, c.finish, start, finish))
-    #                for cc in self.certs:
-    #                    print("{}: {} - {} -- {}".format(cc.status_dt, cc.start, cc.finish, cc.status))
-
-                    if c.finish > finish:
-                        finish = c.finish
-                    if c.start < start:
-                        start = c.start
-            if overlaps > 0:
-                print("OVERLAPS: {} [{}] x {}".format(self.name, scheme, overlaps))
-
-#            if ranges == []:
-#                ranges.append(())
-
-
-#            print(c.as_string())
-
 
 class CertificatesList(object):
     NSMAP = {'a': 'CertificatesExternalPublicDataWarehouse'}
@@ -194,25 +171,17 @@ class CertificatesList(object):
             xml = etree.parse(filename)
         elif data is not None:
             xml = etree.fromstring(data)
+        else:
+            raise Exception("fiename or data MUST be provided.")
 
         for node in xml.xpath('.//a:Detail', namespaces=self.NSMAP):
-            self.certificates.append(Certificates(node))
+            _cert = Certificates(node)
+            self.station_data.setdefault(_cert.generator_id,
+                                         CertificateStation(_cert.name, _cert.generator_id)).add_cert(_cert)
 
     def __len__(self):
         return len(self.certificates)
 
     def stations(self):
-        if self.station_data == {}:
-            self._collate_stations()
         for s in sorted(self.station_data.keys()):
             yield self.station_data[s]
-
-    def _collate_stations(self):
-        for c in self.certificates:
-            if c.name not in self.station_data:
-                self.station_data[c.name] = CertificateStation(c.name, c.generator_id)
-            self.station_data[c.name].add_cert(c)
-
-        # finalise...
-        for s in self.station_data:
-            self.station_data[s].finalise()

@@ -145,6 +145,7 @@ class CertificateTree(object):
         """ Add a CertificateRange object. We keep the list correctly
             sorted and update the center value for the tree as we go.
         """
+        print(range)
         self.ranges.append(range)
         self.ranges = sorted(self.ranges)
         self.center = self.ranges[-1].finish / 2
@@ -216,8 +217,6 @@ class CertificateTree(object):
             v = self.flattened_nodes[n]
             print(v)
 
-
-
     def _insert(self, value, node):
         if node.value == value:
             return
@@ -270,6 +269,8 @@ class CertificateTree(object):
         nodes = {}
         if self.top_node is not None:
             self._add_nodes(self.top_node, nodes)
+        print("    _flatten:")
         for n in nodes.values():
-            print(str(n))
+            print("        {}".format(str(n)))
+
         return nodes

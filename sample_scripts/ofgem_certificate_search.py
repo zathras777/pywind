@@ -22,13 +22,16 @@
 # - accreditation changed to generator_id
 # - order of filtering updated to avoid conflicts
 # - updated output for new object structure
+# - verbose flag added to output full output
 
 import argparse
 import csv
 from datetime import datetime
+
 from pywind.ofgem.Base import to_string
 from pywind.ofgem.CertificateSearch import CertificateSearch
 from pywind.ofgem.Certificates import CertificateStation
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Get ofgem certificates for a given month & year')
@@ -38,6 +41,7 @@ if __name__ == '__main__':
     parser.add_argument('--scheme', action='store', help='Scheme to search (defaults to RO and REGO)')
     parser.add_argument('--filename', action='store', help='Filename to parse')
     parser.add_argument('--output', action='store', help='Filename to store output in (as CVS)')
+    parser.add_argument('--verbose', action='store_true', help='Show verbose output')
 
     args = parser.parse_args()
 
@@ -77,19 +81,18 @@ if __name__ == '__main__':
             if station.has_rego:
                 print("  REGO:")
                 for c in station.get_certs(b'REGO'):
-                    print(c.as_string())
+                    print(c.as_string() if args.verbose else str(c))
                 print("\n")
+
             if station.has_ro:
                 print("  RO:")
                 for c in station.get_certs(b'RO'):
-                    print(c.as_string())
+                    print(c.as_string() if args.verbose else str(c))
                 print("\n")
     else:
         with open(args.output, 'wt') as csvfile:
             csv_writer = csv.writer(csvfile, quoting=csv.QUOTE_NONNUMERIC)
             csv_writer.writerow(CertificateStation.csv_title_row())
             for s in ocs.stations():
-#                for r in s.as_csvrow():
                 csv_writer.writerows(s.as_csvrow())
         print("Output saved to file {} [CSV]".format(args.output))
-
