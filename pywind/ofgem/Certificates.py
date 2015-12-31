@@ -108,6 +108,14 @@ class Certificates(object):
         return s
 
 
+def _scheme_from_generator_id(gen_id):
+    if gen_id[0] == 'G':
+        return 'REGO'
+    elif gen_id[0] == 'R':
+        return 'RO'
+    return None
+
+
 class CertificateStation(object):
     """ We are normally interested in knowing about certificates issued to
         a station, so this class attempts to simplify this process.
@@ -116,12 +124,13 @@ class CertificateStation(object):
         Certificate objects and simplify them into a final set, with ownership
         and status correctly attributed.
     """
-    def __init__(self, name, g_id):
+    def __init__(self, name, g_id, capacity):
         self.name = name
         self.generator_id = g_id
-        self.output = {}
-        self.certs = {}
-
+        self.scheme = _scheme_from_generator_id(g_id)
+        self.capacity = capacity      
+        self.certs = []
+        
     def __len__(self):
         return len(self.certs)
 
@@ -129,20 +138,8 @@ class CertificateStation(object):
         for c in self.certs:
             yield c
 
-    @property
-    def has_rego(self):
-        return b'REGO' in self.certs
-
-    @property
-    def has_ro(self):
-        return b'RO' in self.certs
-
     def add_cert(self, cert):
-        self.certs.setdefault(cert.scheme, []).append(cert)
-
-    def get_certs(self, scheme):
-        for c in self.certs.get(scheme, []):
-            yield c
+        self.certs.append(cert)
 
     @classmethod
     def csv_title_row(cls):
@@ -162,7 +159,6 @@ class CertificatesList(object):
     NSMAP = {'a': 'CertificatesExternalPublicDataWarehouse'}
 
     def __init__(self, filename=None, data=None):
-        self.certificates = []
         self.station_data = {}
         if filename is None and data is None:
             return
@@ -177,11 +173,12 @@ class CertificatesList(object):
         for node in xml.xpath('.//a:Detail', namespaces=self.NSMAP):
             _cert = Certificates(node)
             self.station_data.setdefault(_cert.generator_id,
-                                         CertificateStation(_cert.name, _cert.generator_id)).add_cert(_cert)
+                                         CertificateStation(_cert.name, _cert.generator_id, _cert.capacity)).add_cert(_cert)
 
     def __len__(self):
-        return len(self.certificates)
+        return len(self.station_data)
 
     def stations(self):
         for s in sorted(self.station_data.keys()):
             yield self.station_data[s]
+

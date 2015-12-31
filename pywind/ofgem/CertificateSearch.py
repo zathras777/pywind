@@ -30,7 +30,9 @@ except ImportError:
 from .Base import OfgemForm
 from .Certificates import Certificates, CertificatesList
 
+
 MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
 
 class CertificateSearch(object):
     """ Class that queries ofgem for certificate data. If it succeeds then
@@ -45,7 +47,6 @@ class CertificateSearch(object):
 
         len(object) will return the number of certificates currently available.
 
-        object.certificate_dicts() will return a list of every certificate as a dict.
     """
 
     START_URL = 'ReportViewer.aspx?ReportPath=/DatawarehouseReports/CertificatesExternalPublicDataWarehouse&ReportVisibility=1&ReportCategory=2'
@@ -123,5 +124,3 @@ class CertificateSearch(object):
     def stations(self):
         return self.cert_list.stations()
 
-    def certificate_dicts(self):
-        return [c.as_dict() for c in self.certificates]
