@@ -65,9 +65,8 @@ class CertificateSearch(object):
         return len(self.cert_list)
 
     def set_month(self, m):
-        if type(m) is int:
+        if type(m) in [int, long]:
             m = MONTHS[m - 1]
-
         self.set_start_month(m)
         self.set_finish_month(m)
 
@@ -76,8 +75,8 @@ class CertificateSearch(object):
         self.set_finish_year(yr)
 
     def set_period(self, year, month):
-        self.set_year(year)
-        self.set_month(month)
+        self.set_year(int(year))
+        self.set_month(int(month))
 
     def set_start_month(self, m):
         self.form.set_value("output period \"month from\"", m)

@@ -60,13 +60,16 @@ if __name__ == '__main__':
             ocs.filter_generator_id(args.generator.upper())
             crits.append("\n\tgenerator id is '%s'" % args.generator.upper())
 
-        if args.month:
-            ocs.set_month(args.month)
-            crits.append('\n\tmonth %s' % args.month)
-
-        if args.year:
-            ocs.set_year(args.year)
-            crits.append('\n\tyear %s' % args.year)
+        if args.month and  args.year:
+            ocs.set_period(args.year, args.month)
+            crits.append('\n\tperiod should be {} {}'.format(args.month, args.year))
+        else:
+            if args.month:
+                ocs.set_month(args.month)
+                crits.append('\n\tmonth %s' % args.month)
+            if args.year:
+                ocs.set_year(args.year)
+                crits.append('\n\tyear %s' % args.year)
 
         print("Searching Ofgem for certificates matching:{}\n".format(", ".join(crits)))
         ocs.get_data()
@@ -78,17 +81,10 @@ if __name__ == '__main__':
     if args.output is None:
         for station in ocs.stations():
             print("{:16s}: {}".format(to_string(station, 'generator_id'), to_string(station, 'name')))
-            if station.has_rego:
-                print("  REGO:")
-                for c in station.get_certs(b'REGO'):
-                    print(c.as_string() if args.verbose else str(c))
-                print("\n")
+            for c in station.certs:
+                print(c.as_string() if args.verbose else str(c))
+            print("\n")
 
-            if station.has_ro:
-                print("  RO:")
-                for c in station.get_certs(b'RO'):
-                    print(c.as_string() if args.verbose else str(c))
-                print("\n")
     else:
         with open(args.output, 'wt') as csvfile:
             csv_writer = csv.writer(csvfile, quoting=csv.QUOTE_NONNUMERIC)
@@ -96,3 +92,4 @@ if __name__ == '__main__':
             for s in ocs.stations():
                 csv_writer.writerows(s.as_csvrow())
         print("Output saved to file {} [CSV]".format(args.output))
+

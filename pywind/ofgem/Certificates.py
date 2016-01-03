@@ -101,6 +101,10 @@ class Certificates(object):
         return "%s: %s   %s vs %s => %.02f%%" % (self.period, self.name, self.certs,
                                                  self.capacity, perc)
 
+    def station_details(self):
+        S_FIELDS = ['generator_id', 'name', 'scheme', 'capacity', 'country', 'technology', 'output']
+        return {fld: getattr(self, fld) for fld in S_FIELDS}
+          
     def as_string(self):
         s = ''
         for f in self.FIELDS:
