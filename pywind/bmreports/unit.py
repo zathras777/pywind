@@ -1,5 +1,5 @@
 # coding=utf-8
-
+""" Unit data from BM Reports """
 #
 # Copyright 2013, 2014 david reid <zathrasorama@gmail.com>
 #
@@ -16,12 +16,14 @@
 # limitations under the License.
 
 import os
+
+import requests
 import xlrd
 
 from datetime import timedelta, date, datetime
 from tempfile import NamedTemporaryFile
 
-from .utils import xpath_gettext, parse_response_as_xml
+from .utils import xpath_gettext, parse_response_as_xml, yesno
 from pywind.ofgem.utils import get_url
 
 
@@ -57,10 +59,8 @@ class UnitData(object):
             UnitData will query for settlement period 1 yesterday for
             Derived Data.
         """
-        #print(kwargs)
         self.data = []
         self.date = kwargs.get('date', date.today() - timedelta(days=1))
-        #print(self.date)
         self.period = kwargs.get('period', 1)
         self.unitid = kwargs.get('unitid', '')
         self.unittype = kwargs.get('unittype', '')
@@ -72,7 +72,7 @@ class UnitData(object):
         self.set_type(kwargs.get('type', 'Derived'))
 
     def set_type(self, typ):
-        ''' Will throw an error if an invalid type is used... '''
+        """ Will throw an error if an invalid type is used... """
         self.type = self.TYPES[typ]
 
     def as_params(self):
@@ -173,21 +173,48 @@ class UnitData(object):
         return len(self.data) > 0
 
 
-class UnitList(object):
-    """ Get a list of the Balancing Mechanism Units with their
-        Fuel Type and dates.
-    """
-    XLS_URL='http://www.bmreports.com/bsp/staticdata/BMUFuelType.xls'
+class BaseUnitClass(object):
+    """ Base class """
+    XLS_URL = ""
+    SHEET_NAME = ""
 
     def __init__(self):
+        self.units = []
         self.get_list()
 
     def __len__(self):
         return len(self.units)
 
-    def _mkdate(self, book, sheet, row, col):
-        val = sheet.cell(row, col).value
-        return datetime(*xlrd.xldate_as_tuple(val, book.datemode)).date()
+    def get_list(self):
+        self.units = []
+        req = requests.get(self.XLS_URL)
+        if req.status_code != 200:
+            return
+        tmp_f = NamedTemporaryFile(delete=False)
+        with open(tmp_f.name, 'w') as fhh:
+            fhh.write(req.content)
+
+        wbb = xlrd.open_workbook(tmp_f.name)
+        sht = wbb.sheet_by_name(self.SHEET_NAME)
+
+        for rownum in range(1, sht.nrows):
+            self._extract_row_data(wbb, sht, rownum)
+
+        try:
+            os.unlink(tmp_f.name)
+        except Exception:
+            pass
+
+    def _extract_row_data(self, wbb, sht, rownum):
+        raise NotImplementedError
+
+
+class UnitList(BaseUnitClass):
+    """ Get a list of the Balancing Mechanism Units with their
+        Fuel Type and dates.
+    """
+    XLS_URL = "http://www.bmreports.com/bsp/staticdata/BMUFuelType.xls"
+    SHEET_NAME = "BMU Fuel Types"
 
     def by_fuel_type(self, fuel):
         units = []
@@ -196,75 +223,36 @@ class UnitList(object):
                 units.append(unit)
         return units
 
-    def get_list(self):
-        self.units = []
-        req = get_url(self.XLS_URL)
-        f = NamedTemporaryFile(delete=False)
-        with open(f.name, 'w') as fh:
-            fh.write(req.read())
-
-        wb = xlrd.open_workbook(f.name)
-        sh = wb.sheet_by_name(u'BMU Fuel Types')
-
-        for rownum in range(1, sh.nrows):
-            ud = {'ngc_id': sh.cell(rownum, 0).value,
-                  'sett_id': sh.cell(rownum, 1).value,
-                  'fuel_type': sh.cell(rownum, 2).value,
-                  'eff_from': _mkdate(wb, sh, rownum,3),
-                  'eff_to': _mkdate(wb, sh, rownum, 4)
-            }
-            if ud['sett_id'] == 42:
-                del(ud['sett_id'])
-
-            self.units.append(ud)
-        try:
-            os.unlink(f.name)
-        except:
-            pass
+    def _extract_row_data(self, wbb, sht, rownum):
+        row_data = {
+            'ngc_id': sht.cell(rownum, 0).value,
+            'sett_id': sht.cell(rownum, 1).value,
+            'fuel_type': sht.cell(rownum, 2).value,
+            'eff_from': _mkdate(wbb, sht, rownum,3),
+            'eff_to': _mkdate(wbb, sht, rownum, 4)
+        }
+        if row_data['sett_id'] == 42:
+            del(row_data['sett_id'])
+        self.units.append(row_data)
 
 
-class PowerPackUnits(object):
+class PowerPackUnits(BaseUnitClass):
     """ Download the latest Power Pack modules spreadsheet and make the
         list of stations available as a list.
     """
-    XLS_URL='http://www.bmreports.com/bsp/staticdata/PowerParkModules.xls'
-    def __init__(self):
-        self.get_list()
+    XLS_URL = 'http://www.bmreports.com/bsp/staticdata/PowerParkModules.xls'
+    SHEET_NAME = "Sheet1"
 
-    def __len__(self):
-        return len(self.units)
-
-    def yesno(self, val):
-        if val.lower() in ['yes','true']:
-            return True
-        return False
-
-    def get_list(self):
-        self.units = []
-        req = get_url(self.XLS_URL)
-        f = NamedTemporaryFile(delete=False)
-        with open(f.name, 'w') as fh:
-            fh.write(req.read())
-
-        wb = xlrd.open_workbook(f.name)
-        sh = wb.sheet_by_name(u'Sheet1')
-
-        for rownum in range(1, sh.nrows):
-            ud = {
-                'sett_id': sh.cell(rownum, 0).value,
-                'ngc_id': sh.cell(rownum, 1).value,
-                'name': sh.cell(rownum, 2).value,
-                'reg_capacity': sh.cell(rownum, 3).value,
-                'date_added': _mkdate(wb, sh, rownum, 4),
-                'bmunit': self.yesno(sh.cell(rownum, 5).value),
-                'cap': sh.cell(rownum, 6).value
-            }
-            if ud['ngc_id'] == '':
-                break
-            self.units.append(ud)
-
-        try:
-            os.unlink(f.name)
-        except:
-            pass
-
+    def _extract_row_data(self, wbb, sht, rownum):
+        row_data = {
+            'sett_id': sht.cell(rownum, 0).value,
+            'ngc_id': sht.cell(rownum, 1).value,
+            'name': sht.cell(rownum, 2).value,
+            'reg_capacity': sht.cell(rownum, 3).value,
+            'date_added': _mkdate(wbb, sht, rownum, 4),
+            'bmunit': yesno(sht.cell(rownum, 5).value),
+            'cap': sht.cell(rownum, 6).value
+        }
+        if row_data['ngc_id'] == '':
+            return
+        self.units.append(row_data)
