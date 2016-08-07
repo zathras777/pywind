@@ -21,7 +21,7 @@ setup(
     url='https://github.com/zathras777/pywind',
     packages=find_packages(exclude=['tests']),
     install_requires=[
-        'lxml', 'xlrd', 'html5lib'
+        'lxml', 'xlrd', 'html5lib', 'requests'
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',
