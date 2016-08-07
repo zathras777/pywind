@@ -1,4 +1,6 @@
 # coding=utf-8
+""" Module for performing a search of Ofgem Stations.
+"""
 #
 # Copyright 2013-2015 david reid <zathrasorama@gmail.com>
 #
@@ -14,54 +16,64 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=E1101
+
 import copy
+from lxml import etree
 
 from .Base import OfgemForm
-from pywind.ofgem.Station import Station
-from lxml import etree
+from .Station import Station
 
 
 class StationSearch(object):
-
-    START_URL = 'ReportViewer.aspx?ReportPath=/Renewables/Accreditation/AccreditedStationsExternalPublic&ReportVisibility=1&ReportCategory=1'
+    """ Class that allows easy searching of Ofgem stations and manages results. """
+    START_URL = 'ReportViewer.aspx?ReportPath=/Renewables/Accreditation/" +' \
+                'AccreditedStationsExternalPublic&ReportVisibility=1&ReportCategory=1'
 
     def __init__(self):
         self.form = OfgemForm(self.START_URL)
         self.stations = []
 
     def __len__(self):
+        """ len(...) returns the number of stations available. """
         return len(self.stations)
 
     def __getitem__(self, item):
+        """ Get a station by name. """
         if 0 >= item < len(self.stations):
             return self.stations[item]
 
     def get_data(self):
+        """ Get data from form. """
         if self.form.get_data():
             doc = etree.fromstring(self.form.data)
             # There are a few stations with multiple generator id's, separated by '\n' so
             # capture them and add each as a separate entry.
             for detail in doc.xpath("//*[local-name()='Detail']"):
-                st = Station(detail)
-                if b'\n' in st.generator_id:
-                    ids = [x.strip() for x in st.generator_id.split(b'\n')]
-                    st.generator_id = ids[0]
+                stt = Station(detail)
+                if b'\n' in stt.generator_id:
+                    ids = [x.strip() for x in stt.generator_id.split(b'\n')]
+                    stt.generator_id = ids[0]
                     for _id in ids[1:]:
-                        _st = copy.copy(st)
+                        _st = copy.copy(stt)
                         _st.generator_id = _id
                         self.stations.append(_st)
-                self.stations.append(st)
+                self.stations.append(stt)
             return True
         return False
 
     def filter_technology(self, what):
+        """ Filter stations based on technology. """
         return self.form.set_value("technology", what)
 
     def filter_scheme(self, scheme):
+        """ Filter stations based on scheme they are members of. """
         return self.form.set_value("scheme", scheme.upper())
 
     def filter_name(self, name):
+        """ Filter stations based on name. """
         return self.form.set_value("generating station search", name)
 
     def filter_generator_id(self, accno):
+        """ Filter stations based on generator id. """
         return self.form.set_value("accreditation search", accno)
