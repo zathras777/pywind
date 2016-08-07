@@ -1,4 +1,5 @@
 # coding=utf-8
+""" Base module for all Ofgem forms. """
 #
 # Copyright 2013-2015 david reid <zathrasorama@gmail.com>
 #
@@ -14,14 +15,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import html5lib
+
+from __future__ import print_function
+
 import re
-import requests
-from lxml import etree
-from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.poolmanager import PoolManager
-import ssl
 import sys
+from lxml import etree
+
+import html5lib
+import requests
 
 try:
     from urllib import quote
@@ -30,6 +32,7 @@ except ImportError:
 
 
 def set_attr_from_xml(obj, node, attr, name):
+    """ Given an object and an xml node, set an attribute on the object from an xml attribute. """
     val = node.get(attr, None)
     if val in [None, '']:
         val = None
@@ -49,33 +52,35 @@ def to_string(obj, attr):
     val = getattr(obj, attr)
     if val is None:
         return ''
-    if type(val) is str:
+    if isinstance(val, str):
         return val
-    elif type(val) is int:
+    elif isinstance(val, int):
         return str(val)
-    elif type(val) is float:
+    elif isinstance(val, float):
         return "{:.02f}".format(val)
     elif hasattr(val, 'strftime'):
         return val.strftime("%Y-%m-%d")
     return val.decode()
 
 
-def as_csv(obj, f):
+def as_csv(obj, fld):
     """ Return the given field as a value suitable for inclusion in a CSV file for Python 2 or 3 """
-    val = getattr(obj, f)
-    if sys.version_info >= (3, 0) and type(val) is bytes:
+    val = getattr(obj, fld)
+    if sys.version_info >= (3, 0) and isinstance(val, bytes):
         return val.decode()
     return val
 
 
-def as_csv_title(m):
-    return (m[0] if len(m) == 1 else m[1]).capitalize().replace('_', ' ')
+#def as_csv_title(m):
+#    """ Return a string as a CSV column title. """
+#    return (m[0] if len(m) == 1 else m[1]).capitalize().replace('_', ' ')
 
 
 class OfgemField(object):
-    def __init__(self, el=None):
+    """ Class to represent a field on an Ofgem form. """
+    def __init__(self, elm=None):
         self.name = None
-        self.id = None
+        self.idd = None
         self.label = None
         self.type = None
         self.value = None
@@ -85,26 +90,30 @@ class OfgemField(object):
         self.separator = ','
         self.dropdown = None
 
-        if el is not None:
-            self._from_element(el)
+        if elm is not None:
+            self._from_element(elm)
 
-    def _from_element(self, el):
-        self.type = el.get('type')
-        self.id = el.get('id')
-        self.name = el.get('name')
+    def _from_element(self, elm):
+        """ Update class from an XML element. """
+        self.type = elm.get('type')
+        self.idd = elm.get('id')
+        self.name = elm.get('name')
         if self.type == 'checkbox':
-            self.checked = True if el.get('checked', '') == 'checked' else False
-        self.value = el.get('value')
-        self.disabled = el.get('disabled', '') == 'disabled'
+            self.checked = True if elm.get('checked', '') == 'checked' else False
+        self.value = elm.get('value')
+        self.disabled = elm.get('disabled', '') == 'disabled'
 
     @property
     def has_options(self):
+        """ Does this field have any options? """
         return len(self.options) > 0
 
     def value_from_list(self, _list):
+        """ Set the value to the supplied list. """
         self.value = self.separator.join(_list)
 
     def set_value(self, what):
+        """ Set a value for this field. """
         if self.has_options:
             self.set_option(what)
         elif self.dropdown is not None:
@@ -113,10 +122,11 @@ class OfgemField(object):
             self.value = what
 
     def __str__(self):
-        return "type {}, id {}, postback {}".format(self.type, self.id, self.postback)
+        return "type {}, id {}, postback {}".format(self.type, self.idd, self.postback)
 
 
 class SelectOption(object):
+    """ Class to represent an option in a select field. """
     def __init__(self, opt):
         self.value = opt.get('value')
         self.selected = opt.get('selected', '') == 'selected'
@@ -127,21 +137,20 @@ class SelectOption(object):
 
 
 class OfgemSelectField(OfgemField):
-    def __init__(self, el):
-        OfgemField.__init__(self, el=el)
+    """ Class to represent a select field """
+    def __init__(self, elm):
+        OfgemField.__init__(self, elm=elm)
         self.type = 'select'
-        for opt in el.xpath('./option'):
+        for opt in elm.xpath('./option'):
             self.options.append(SelectOption(opt))
         for opt in self.options:
             if opt.selected:
                 self.value = opt.value
 
     def set_option(self, what):
-        if type(what) is int:
-            if what < 10:
-                what = "{:02d}".format(what)
-            else:
-                what = "{}".format(what)
+        """ Set an option on the field. """
+        if isinstance(what, int):
+            what = "{:02d}".format(what)
         for opt in self.options:
             if opt.label == what:
                 self.value = opt.value
@@ -151,6 +160,7 @@ class OfgemSelectField(OfgemField):
 
 
 class OfgemDropdown(object):
+    """ Ofgem Dropdown field. """
     def __init__(self, mgr, fld):
         """ The fld should point to the $HiddenIndices field. """
         self.opts = {}
@@ -161,49 +171,52 @@ class OfgemDropdown(object):
             return
 
         if fld.value is not None:
-            for i in [int(x) for x in fld.value.split(',')]:
-                opt_name = fld.name.replace('ctl01$HiddenIndices', 'ctl{:02d}'.format(i + 2))
+            for val in [int(part) for part in fld.value.split(',')]:
+                opt_name = fld.name.replace('ctl01$HiddenIndices', 'ctl{:02d}'.format(val + 2))
                 opt_fld = mgr.by_name(opt_name)
                 if opt_fld is not None:
-                    self.opts[opt_fld.label] = i
+                    self.opts[opt_fld.label] = val
                     if opt_fld.checked:
                         self.current.append(opt_fld.label)
         self.parent.dropdown = self
         self._set_value()
 
-    def set_value(self, val):
+    def set_value(self, value):
         """ We expect the val to be one or more of the possible options, i.e. text not indices. """
         self.current = []
-        for v in [x.strip() for x in val.split(",")]:
-            if v in self.opts:
-                self.current.append(v)
+        for val in [part.strip() for part in value.split(",")]:
+            if val in self.opts:
+                self.current.append(val)
         self._set_value()
 
     def _set_value(self):
+        """ Set the field value """
         if self.parent is None:
             return
         self.parent.value = ",".join(self.current)
-        self.field.value = ",".join([str(self.opts[v]) for v in self.current])
+        self.field.value = ",".join([str(self.opts[key]) for key in self.current])
 
 
 class OfgemRadioField(OfgemField):
+    """ Ofgem Radio Field """
     class RadioOption(object):
         def __init__(self):
             self.value = None
             self.label = None
             self.checked = False
 
-    def __init__(self, el):
-        OfgemField.__init__(self, el=el)
+    def __init__(self, elm):
+        OfgemField.__init__(self, elm=elm)
         self.type = 'radio'
         self.options = []
-        self.add_option(el)
+        self.add_option(elm)
 
-    def add_option(self, el):
+    def add_option(self, elm):
+        """ Add an option to the field. """
         opt = self.RadioOption()
-        opt.value = el.get('value')
-        opt.checked = el.get('checked', '') == 'checked'
-        lbls = el.xpath('../label')
+        opt.value = elm.get('value')
+        opt.checked = elm.get('checked', '') == 'checked'
+        lbls = elm.xpath('../label')
         if len(lbls) > 0:
             opt.label = lbls[0].text
         self.options.append(opt)
@@ -212,49 +225,57 @@ class OfgemRadioField(OfgemField):
 
 
 class FieldManager(object):
+    """ Class to manage one or more fields. """
     def __init__(self):
         self.names = {}
         self.ids = {}
         self.labels = {}
 
     def add_or_update(self, fld):
+        """ Add or update a field to the manager. """
         if fld.name is not None:
             self.names[fld.name.lower()] = fld
-        self.ids[fld.id] = fld
+        self.ids[fld.idd] = fld
 
     # needs renaming...
     def get_or_create(self, name, value=None):
+        """ Get a field or create a new one if it doesn't exist. """
         fld = self.by_name(name)
         if fld is not None:
-            if fld is not None:
-                fld.set_value(value)
+            fld.set_value(value)
             return fld
         node = etree.Element("input", value=value or '', type="hidden", name=name, id=name)
-        of = OfgemField(node)
-        self.add_or_update(of)
-        return of
+        off = OfgemField(node)
+        self.add_or_update(off)
+        return off
 
     def by_id(self, _id):
+        """ Get a field by ID """
         return self.ids.get(_id)
 
-    def by_name(self, nm):
-        return self.names.get(nm.lower())
+    def by_name(self, name):
+        """ Get a field by name """
+        return self.names.get(name.lower())
 
     def by_label(self, lbl):
+        """ Get a field by a label """
         return self.labels.get(lbl.lower())
 
     def set_label_by_id(self, lbl, _id):
+        """ Set a field lable by its id """
         fld = self.by_id(_id)
         if fld is not None:
             self.labels[lbl.lower()] = fld
             fld.label = lbl.lower()
 
     def do_postback(self, _id):
+        """ Set the postback flag. """
         fld = self.by_id(_id)
         if fld is not None:
             fld.postback = True
 
     def set_separator(self, _id, sep):
+        """ Set the seperator to use. """
         fld = self.by_id(_id)
         if fld is not None:
             fld.separator = sep
@@ -264,44 +285,35 @@ class FieldManager(object):
             NB quote is used as quote_plus fails.
         """
         p_d = []
-        for f in self:
-            if 'divDropDown$ctl' in f.name and 'HiddenIndices' not in f.name:
+        for fld in self:
+            if 'divDropDown$ctl' in fld.name and 'HiddenIndices' not in fld.name:
                 continue
-            val = f.value or ''
-            if f.type == 'checkbox':
+            val = fld.value or ''
+            if fld.type == 'checkbox':
                 # Only checkboxes that are ticked are expected to be posted.
-                if f.value is False:
+                if fld.value is False:
                     continue
                 val = 'on'
-            p_d.append("{}={}".format(quote(f.name), quote(val)))
+            p_d.append("{}={}".format(quote(fld.name), quote(val)))
         return "&".join(p_d)
 
     def __iter__(self):
-        for nm in sorted(self.names):
-            yield self.names[nm]
-
-
-class TLSv1Adapter(HTTPAdapter):
-    def init_poolmanager(self, connections, maxsize, block=False):
-        self.poolmanager = PoolManager(num_pools=connections,
-                                       maxsize=maxsize,
-                                       block=block,
-                                       ssl_version=ssl.PROTOCOL_TLSv1)
+        for name in sorted(self.names):
+            yield self.names[name]
 
 
 class OfgemForm(object):
+    """ Class to represent an Ofgem form instance. """
     OFGEM_BASE = 'https://www.renewablesandchp.ofgem.gov.uk/Public/'
 
     def __init__(self, url):
         """ Create an instance of OfgemForm found at the url provided. """
-        if not url.startswith('http'):
+        if not url.startswith('https'):
             url = self.OFGEM_BASE + url
 
-        requests.packages.urllib3.disable_warnings()
-        self.session = requests.Session()
-        self.session.mount('https://', TLSv1Adapter())
+#        requests.packages.urllib3.disable_warnings()
 
-        self.n = 1
+        self.num = 1
         self.url = url
         self.export_url = None
         self.data = None
@@ -311,6 +323,7 @@ class OfgemForm(object):
         self._get()
 
     def set_value(self, lbl, what):
+        """ Set a value by field. """
         fld = self.fields.by_label(lbl)
         if fld is None:
             raise Exception("Unknown label '{}'".format(lbl))
@@ -318,8 +331,8 @@ class OfgemForm(object):
         if '$txtValue' in fld.name:
             # Some fields have a checkbox that is set when the field is blank,
             # so as we're setting the value, clear the checkbox.
-            cb = fld.name.replace('$txtValue', '$cbNull')
-            cb_obj = self.fields.by_name(cb)
+            cbb = fld.name.replace('$txtValue', '$cbNull')
+            cb_obj = self.fields.by_name(cbb)
             if cb_obj is not None:
                 cb_obj.value = False
 
@@ -329,15 +342,16 @@ class OfgemForm(object):
             self._update(fld.name)
 
     def get_data(self):
+        """ Get data from the form. """
         self.set_value('page size', 25)
         self._update('ReportViewer$ctl04$ctl00')
 
         if self.export_url is None:
             return False
-        r = self.session.get(self.export_url + 'XML', cookies=self.cookies)
-        if r.status_code != 200:
+        req = requests.get(self.export_url + 'XML', cookies=self.cookies)
+        if req.status_code != 200:
             raise
-        self.data = r.content
+        self.data = req.content
         return True
 
     #
@@ -346,48 +360,56 @@ class OfgemForm(object):
     def _get(self):
         """ Get the form without trying to update it. Used for initial retrieval. """
         try:
-            r = self.session.get(self.url)
-        except requests.exceptions.SSLError as e:
-            raise Exception("SSL Error\n  Error: {}\n    URL: {}".format(e.message[0], self.url))
+            req = requests.get(self.url)
+        except requests.exceptions.SSLError as err:
+            raise Exception("SSL Error\n  Error: {}\n    URL: {}".
+                            format(err.message[0], self.url))
         except requests.exceptions.ConnectionError:
-            raise Exception("Unable to connect to the Ofgem server.\nURL: {}".format(self.url))
+            raise Exception("Unable to connect to the Ofgem server.\nURL: {}".
+                            format(self.url))
 
-        self._process_response(r)
+        self._process_response(req)
 
     def _update(self, name=''):
+        """ Update the form. """
         self.fields.get_or_create('__EVENTTARGET', name)
         self.fields.get_or_create('ScriptManager1', "ScriptManager1|{}".format(name))
 
+        form_hdrs = {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'}
         try:
-            r = self.session.post(self.action,
-                                  cookies=self.cookies,
-                                  headers={'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
-                                  data=self.fields.post_data())
-        except requests.exceptions.SSLError as e:
-            raise Exception("SSL Error\n  Error: {}\n    URL: {}".format(e.message, self.url))
+            req = requests.post(self.action,
+                                cookies=self.cookies,
+                                headers=form_hdrs,
+                                data=self.fields.post_data())
+        except requests.exceptions.SSLError as err:
+            raise Exception("SSL Error\n  Error: {}\n    URL: {}".
+                            format(err.message, self.url))
         except requests.exceptions.ConnectionError:
             raise Exception("Cannot connect to Ofgem server")
 
-        document = self._process_response(r)
+        document = self._process_response(req)
 
-        for nm in ['__VIEWSTATE', '__EVENTVALIDATION']:
-            poss = document.xpath('//input[@name="{}"]'.format(nm))
+        for nmv in ['__VIEWSTATE', '__EVENTVALIDATION']:
+            poss = document.xpath('//input[@name="{}"]'.format(nmv))
             if len(poss) == 1:
-                self.fields.get_or_create(nm, poss[0].get('value'))
+                self.fields.get_or_create(nmv, poss[0].get('value'))
 
         for scr in document.xpath('//script'):
             if scr.text is None or 'Sys.Application' not in scr.text:
                 continue
-            for js in re.findall(r"Sys.Application.add_init\(function\(\) \{\n(.*)\n\}\);", scr.text):
-                xpb = re.search('\"ExportUrlBase\":\"(.*?)\",', js)
+            for jss in re.findall(r"Sys.Application.add_init\(function\(\) \{\n(.*)\n\}\);",
+                                  scr.text):
+                xpb = re.search('\"ExportUrlBase\":\"(.*?)\",', jss)
                 if xpb is not None:
                     self.export_url = xpb.group(1)
                     if not self.export_url.startswith('http'):
                         self.export_url = self.OFGEM_BASE + self.export_url
 
     def _process_response(self, response):
+        """ Process a request. """
         if response.status_code != 200:
-            raise Exception("Unable to get the Ofgem form from '{}'\nGot {} expected a 200".format(self.url, response.status_code))
+            raise Exception("Unable to get Ofgem form\nURL: {}\nGot {} but expected a 200".
+                            format(self.url, response.status_code))
 
         self.cookies = response.cookies
         document = html5lib.parse(response.content,
@@ -404,59 +426,61 @@ class OfgemForm(object):
         if not self.action.startswith('http'):
             self.action = self.OFGEM_BASE + self.action
 
-        for el in _form.xpath('//tr[@isparameterrow="true"]/td'):
-            lbls = el.xpath('./label')
+        for elm in _form.xpath('//tr[@isparameterrow="true"]/td'):
+            lbls = elm.xpath('./label')
             if len(lbls) > 0:
                 txt = lbls[0].xpath('./span/font')[0].text
                 labels[lbls[0].get('for')] = txt.replace(':', '')
                 continue
 
-            for inp in el.xpath('.//input'):
-                t = inp.get('type')
-                if t in [None, 'image']:
+            for inp in elm.xpath('.//input'):
+                typ = inp.get('type')
+                if typ in [None, 'image']:
                     continue
-                if t == 'radio':
+                if typ == 'radio':
                     o_fld = self.fields.by_name(inp.get('name'))
                     if o_fld is None:
                         o_fld = OfgemRadioField(inp)
                     else:
                         o_fld.add_option(inp)
                 else:
-                    o_fld = OfgemField(el=inp)
+                    o_fld = OfgemField(elm=inp)
                 self.fields.add_or_update(o_fld)
 
-            for inp in el.xpath('.//select'):
-                o_fld = OfgemSelectField(el=inp)
-                self.fields.add_or_update(o_fld)
+            for inp in elm.xpath('.//select'):
+                o_fld2 = OfgemSelectField(elm=inp)
+                self.fields.add_or_update(o_fld2)
 
-        for el in _form.xpath('//td[@nowrap="nowrap"]'):
-            inps = el.xpath('.//input')
+        for elm in _form.xpath('//td[@nowrap="nowrap"]'):
+            inps = elm.xpath('.//input')
             if len(inps) == 0:
                 continue
-            o_fld = OfgemField(el=inps[0])
-            lbls = el.xpath('.//label')
+            o_fld3 = OfgemField(elm=inps[0])
+            lbls = elm.xpath('.//label')
             if len(lbls) > 0:
-                o_fld.label = lbls[0].text.replace(u"\u00a0", ' ')
-            self.fields.add_or_update(o_fld)
+                o_fld3.label = lbls[0].text.replace(u"\u00a0", ' ')
+            self.fields.add_or_update(o_fld3)
 
         for _id in labels:
             self.fields.set_label_by_id(labels[_id], _id)
 
-        for el in _form.xpath('//input[@type="hidden"]'):
-            self.fields.add_or_update(OfgemField(el=el))
+        for elm in _form.xpath('//input[@type="hidden"]'):
+            self.fields.add_or_update(OfgemField(elm=elm))
 
         for scr in _form.xpath('//script'):
             if scr.text is None or 'Sys.Application' not in scr.text:
                 continue
-            for js in re.findall(r"Sys.Application.add_init\(function\(\) \{\n(.*)\n\}\);", scr.text):
-                tid = re.search('\"(DropDownId|TextBoxId|FalseCheckId|NullCheckBoxId)\":\"(.*?)\",', js)
+            for jss in re.findall(r"Sys.Application.add_init\(function\(\) \{\n(.*)\n\}\);",
+                                  scr.text):
+                tid = re.search('\"(DropDownId|TextBoxId|FalseCheckId|NullCheckBoxId)\":\"(.*?)\",',
+                                jss)
                 if tid is None:
                     continue
-                if '"PostBackOnChange":true' in js:
+                if '"PostBackOnChange":true' in jss:
                     self.fields.do_postback(tid.group(2))
-                ls = re.search('\"ListSeparator\":\"(.*?)\",', js)
-                if ls is not None:
-                    self.fields.set_separator(tid.group(2), ls.group(1))
+                lss = re.search('\"ListSeparator\":\"(.*?)\",', jss)
+                if lss is not None:
+                    self.fields.set_separator(tid.group(2), lss.group(1))
 
         for fld in self.fields:
             if 'HiddenIndices' in fld.name:
