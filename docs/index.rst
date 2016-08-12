@@ -13,6 +13,8 @@ Contents:
 
    code
 
+.. include:: overview.rst
+
 
 Indices and tables
 ==================

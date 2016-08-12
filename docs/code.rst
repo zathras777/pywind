@@ -21,7 +21,7 @@ pywind.roc module
 
 .. automodule:: pywind.roc
     :members:
-    
+
 pywind.utils
 ============
 
