@@ -1,0 +1,347 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pywind.bmreports.unit &mdash; PyWind 1.0.0a0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0.0a0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="PyWind 1.0.0a0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pywind.bmreports.unit</h1><div class="highlight"><pre>
+<span class="c1"># coding=utf-8</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">.. module:: bmreports.unit</span>
+<span class="sd">Unit data from BM Reports</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="c1">#</span>
+<span class="c1"># Copyright 2013, 2014 david reid &lt;zathrasorama@gmail.com&gt;</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">xlrd</span>
+
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="k">import</span> <span class="n">timedelta</span><span class="p">,</span> <span class="n">date</span><span class="p">,</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">tempfile</span> <span class="k">import</span> <span class="n">NamedTemporaryFile</span>
+
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">xpath_gettext</span><span class="p">,</span> <span class="n">parse_response_as_xml</span><span class="p">,</span> <span class="n">yesno</span>
+<span class="kn">from</span> <span class="nn">pywind.ofgem.utils</span> <span class="k">import</span> <span class="n">get_url</span>
+
+
+<span class="k">def</span> <span class="nf">_mkdate</span><span class="p">(</span><span class="n">book</span><span class="p">,</span> <span class="n">sheet</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">):</span>
+    <span class="n">val</span> <span class="o">=</span> <span class="n">sheet</span><span class="o">.</span><span class="n">cell</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span><span class="o">.</span><span class="n">value</span>
+    <span class="k">if</span> <span class="n">val</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">datetime</span><span class="p">(</span><span class="o">*</span><span class="n">xlrd</span><span class="o">.</span><span class="n">xldate_as_tuple</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="n">book</span><span class="o">.</span><span class="n">datemode</span><span class="p">))</span><span class="o">.</span><span class="n">date</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="UnitData"><a class="viewcode-back" href="../../../code.html#pywind.bmreports.UnitData">[docs]</a><span class="k">class</span> <span class="nc">UnitData</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Class that gets data about Balancing Mechanism Units</span>
+<span class="sd">        from the Balancing Mechanism website.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">HOST</span> <span class="o">=</span> <span class="s1">&#39;http://www.bmreports.com&#39;</span>
+    <span class="n">TYPES</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;Physical&#39;</span><span class="p">:</span> <span class="s1">&#39;/servlet/com.logica.neta.bwp_PanBMDataServlet&#39;</span><span class="p">,</span>
+             <span class="s1">&#39;Dynamic&#39;</span><span class="p">:</span> <span class="s1">&#39;/servlet/com.logica.neta.bwp_PanDynamicServlet&#39;</span><span class="p">,</span>
+             <span class="s1">&#39;Bid-Offer&#39;</span><span class="p">:</span> <span class="s1">&#39;/servlet/com.logica.neta.bwp_PanBodServlet&#39;</span><span class="p">,</span>
+             <span class="s1">&#39;Derived&#39;</span><span class="p">:</span> <span class="s1">&#39;DerivedBMUnit&#39;</span><span class="p">,</span>
+             <span class="s1">&#39;BSV&#39;</span><span class="p">:</span> <span class="s1">&#39;/servlet/com.logica.neta.bwp_PanBsvServlet&#39;</span>
+    <span class="p">}</span>
+    <span class="n">CX_TYPE</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;T&#39;</span><span class="p">:</span> <span class="s1">&#39;Directly Connected to Transmission System&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;E&#39;</span><span class="p">:</span> <span class="s1">&#39;Embedded in Distribution System&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;I&#39;</span><span class="p">:</span> <span class="s1">&#39;Interconnector User&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;G&#39;</span><span class="p">:</span> <span class="s1">&#39;Supplier (base)&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;S&#39;</span><span class="p">:</span> <span class="s1">&#39;Supplier (additional)&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;M&#39;</span><span class="p">:</span> <span class="s1">&#39;Other&#39;</span>
+    <span class="p">}</span>
+    <span class="n">DURATION</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;S&#39;</span><span class="p">:</span> <span class="s1">&#39;Short&#39;</span><span class="p">,</span> <span class="s1">&#39;L&#39;</span><span class="p">:</span> <span class="s1">&#39;Long&#39;</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Create an instance of a UnitData class. By default the</span>
+<span class="sd">            UnitData will query for settlement period 1 yesterday for</span>
+<span class="sd">            Derived Data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">date</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="n">date</span><span class="o">.</span><span class="n">today</span><span class="p">()</span> <span class="o">-</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">period</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;period&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">unitid</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;unitid&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">unittype</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;unittype&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">leadparty</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;leadparty&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ngcunitname</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ngcunitname&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">historic</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;historic&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">latest</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;latest&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_type</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;type&#39;</span><span class="p">,</span> <span class="s1">&#39;Derived&#39;</span><span class="p">))</span>
+
+<div class="viewcode-block" id="UnitData.set_type"><a class="viewcode-back" href="../../../code.html#pywind.bmreports.UnitData.set_type">[docs]</a>    <span class="k">def</span> <span class="nf">set_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">typ</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Will throw an error if an invalid type is used... &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">TYPES</span><span class="p">[</span><span class="n">typ</span><span class="p">]</span></div>
+
+    <span class="k">def</span> <span class="nf">as_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;param5&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">date</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">),</span>
+                <span class="s1">&#39;param6&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">period</span><span class="p">,</span>
+                <span class="s1">&#39;element&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">type</span><span class="p">,</span>
+                <span class="s1">&#39;param1&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">unitid</span><span class="p">,</span>
+                <span class="s1">&#39;param2&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">unittype</span><span class="p">,</span>
+                <span class="s1">&#39;param3&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">leadparty</span><span class="p">,</span>
+                <span class="s1">&#39;param4&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">ngcunitname</span><span class="p">,</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">as_params</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">historic</span><span class="p">:</span>
+            <span class="n">req</span> <span class="o">=</span> <span class="n">get_url</span><span class="p">(</span><span class="s1">&#39;http://www.bmreports.com/bsp/additional/soapfunctions.php?&#39;</span><span class="p">,</span> <span class="n">base</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">req</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">req</span><span class="o">.</span><span class="n">code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_process</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="nf">as_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;date&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">date</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">),</span>
+                <span class="s1">&#39;period&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">period</span><span class="p">,</span>
+                <span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">_process</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">req</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Process the XML returned from the request. This will contain a</span>
+<span class="sd">            series of BMU elements, e.g.</span>
+
+<span class="sd">            &lt;BMU ID=&quot;T_WBUPS-4&quot;</span>
+<span class="sd">                 TYPE=&quot;T&quot;</span>
+<span class="sd">                 LEAD_PARTY=&quot;West Burton Limited&quot;</span>
+<span class="sd">                 NGC_NAME=&quot;WBUPS-4&quot;&gt;</span>
+<span class="sd">              &lt;VOLUME&gt;</span>
+<span class="sd">                &lt;BID_VALUES&gt;</span>
+<span class="sd">                  &lt;ORIGINAL&gt;</span>
+<span class="sd">                    &lt;M1&gt;-6.0833&lt;/M1&gt;</span>
+<span class="sd">                    &lt;TOTAL&gt;-6.0833&lt;/TOTAL&gt;</span>
+<span class="sd">                  &lt;/ORIGINAL&gt;</span>
+<span class="sd">                  &lt;TAGGED&gt;</span>
+<span class="sd">                    &lt;M1&gt;-6.0833&lt;/M1&gt;</span>
+<span class="sd">                    &lt;TOTAL&gt;-6.0833&lt;/TOTAL&gt;</span>
+<span class="sd">                  &lt;/TAGGED&gt;</span>
+<span class="sd">                  &lt;REPRICED/&gt;</span>
+<span class="sd">                  &lt;ORIGINALPRICED/&gt;</span>
+<span class="sd">                &lt;/BID_VALUES&gt;</span>
+<span class="sd">                &lt;OFFER_VALUES&gt;</span>
+<span class="sd">                  &lt;ORIGINAL/&gt;</span>
+<span class="sd">                  &lt;TAGGED/&gt;</span>
+<span class="sd">                  &lt;REPRICED/&gt;</span>
+<span class="sd">                  &lt;ORIGINALPRICED/&gt;</span>
+<span class="sd">                &lt;/OFFER_VALUES&gt;</span>
+<span class="sd">              &lt;/VOLUME&gt;</span>
+<span class="sd">              &lt;CASHFLOW&gt;</span>
+<span class="sd">                &lt;BID_VALUES&gt;</span>
+<span class="sd">                  &lt;M1&gt;-203.3800&lt;/M1&gt;</span>
+<span class="sd">                  &lt;TOTAL&gt;-203.3800&lt;/TOTAL&gt;</span>
+<span class="sd">                &lt;/BID_VALUES&gt;</span>
+<span class="sd">                &lt;OFFER_VALUES/&gt;</span>
+<span class="sd">              &lt;/CASHFLOW&gt;</span>
+<span class="sd">            &lt;/BMU&gt;</span>
+
+<span class="sd">            Each units record shows the details of Bids &amp; Offers made</span>
+<span class="sd">            during the settlement period. The actual accepted volumes</span>
+<span class="sd">            should be shown in the ORIGINAL elements.</span>
+<span class="sd">            Units can have both Bid &amp; Offer results in the same Settlement Period.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">root</span> <span class="o">=</span> <span class="n">parse_response_as_xml</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">root</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="n">ELEMENTS</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">[</span><span class="s1">&#39;VOLUME//BID_VALUES//ORIGINAL//TOTAL&#39;</span><span class="p">,</span> <span class="s1">&#39;bid&#39;</span><span class="p">,</span> <span class="s1">&#39;volume&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s1">&#39;VOLUME//OFFER_VALUES//ORIGINAL//TOTAL&#39;</span><span class="p">,</span> <span class="s1">&#39;offer&#39;</span><span class="p">,</span> <span class="s1">&#39;volume&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s1">&#39;CASHFLOW//BID_VALUES//TOTAL&#39;</span><span class="p">,</span> <span class="s1">&#39;bid&#39;</span><span class="p">,</span> <span class="s1">&#39;cashflow&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s1">&#39;CASHFLOW//OFFER_VALUES//TOTAL&#39;</span><span class="p">,</span> <span class="s1">&#39;offer&#39;</span><span class="p">,</span> <span class="s1">&#39;cashflow&#39;</span><span class="p">]</span>
+        <span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">bmu</span> <span class="ow">in</span> <span class="n">root</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s2">&quot;.//ACCEPT_PERIOD_TOTS//*//BMU&quot;</span><span class="p">):</span>
+            <span class="n">bmud</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="n">bmu</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ID&#39;</span><span class="p">),</span>
+                    <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="n">bmu</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;TYPE&#39;</span><span class="p">),</span>
+                    <span class="s1">&#39;lead&#39;</span><span class="p">:</span> <span class="n">bmu</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;LEAD_PARTY&#39;</span><span class="p">),</span>
+                    <span class="s1">&#39;ngc&#39;</span><span class="p">:</span> <span class="n">bmu</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;NGC_NAME&#39;</span><span class="p">),</span>
+                    <span class="s1">&#39;bid&#39;</span><span class="p">:</span> <span class="p">{},</span>
+                    <span class="s1">&#39;offer&#39;</span><span class="p">:</span> <span class="p">{}</span>
+            <span class="p">}</span>
+            <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">ELEMENTS</span><span class="p">:</span>
+                <span class="n">val</span> <span class="o">=</span> <span class="n">xpath_gettext</span><span class="p">(</span><span class="n">bmu</span><span class="p">,</span> <span class="n">el</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">val</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">bmud</span><span class="p">[</span><span class="n">el</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="n">el</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span> <span class="o">=</span> <span class="n">val</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="s1">&#39;volume&#39;</span> <span class="ow">in</span> <span class="n">bmud</span><span class="p">[</span><span class="s1">&#39;bid&#39;</span><span class="p">]</span> <span class="ow">and</span> <span class="ow">not</span> <span class="s1">&#39;volume&#39;</span> <span class="ow">in</span> <span class="n">bmud</span><span class="p">[</span><span class="s1">&#39;offer&#39;</span><span class="p">]:</span>
+                <span class="k">continue</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">bmud</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span></div>
+
+
+<span class="k">class</span> <span class="nc">BaseUnitClass</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Base class &quot;&quot;&quot;</span>
+    <span class="n">XLS_URL</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">SHEET_NAME</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">units</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">get_list</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">units</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">units</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">req</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">XLS_URL</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">req</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">tmp_f</span> <span class="o">=</span> <span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">delete</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">tmp_f</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fhh</span><span class="p">:</span>
+            <span class="n">fhh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">req</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
+
+        <span class="n">wbb</span> <span class="o">=</span> <span class="n">xlrd</span><span class="o">.</span><span class="n">open_workbook</span><span class="p">(</span><span class="n">tmp_f</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">sht</span> <span class="o">=</span> <span class="n">wbb</span><span class="o">.</span><span class="n">sheet_by_name</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">SHEET_NAME</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">rownum</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">sht</span><span class="o">.</span><span class="n">nrows</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_extract_row_data</span><span class="p">(</span><span class="n">wbb</span><span class="p">,</span> <span class="n">sht</span><span class="p">,</span> <span class="n">rownum</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">tmp_f</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">_extract_row_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wbb</span><span class="p">,</span> <span class="n">sht</span><span class="p">,</span> <span class="n">rownum</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+
+
+<div class="viewcode-block" id="UnitList"><a class="viewcode-back" href="../../../code.html#pywind.bmreports.UnitList">[docs]</a><span class="k">class</span> <span class="nc">UnitList</span><span class="p">(</span><span class="n">BaseUnitClass</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Get a list of the Balancing Mechanism Units with their</span>
+<span class="sd">        Fuel Type and dates.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">XLS_URL</span> <span class="o">=</span> <span class="s2">&quot;http://www.bmreports.com/bsp/staticdata/BMUFuelType.xls&quot;</span>
+    <span class="n">SHEET_NAME</span> <span class="o">=</span> <span class="s2">&quot;BMU Fuel Types&quot;</span>
+
+    <span class="k">def</span> <span class="nf">by_fuel_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fuel</span><span class="p">):</span>
+        <span class="n">units</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">unit</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">units</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">unit</span><span class="p">[</span><span class="s1">&#39;fuel_type&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="n">fuel</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                <span class="n">units</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">unit</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">units</span>
+
+    <span class="k">def</span> <span class="nf">_extract_row_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wbb</span><span class="p">,</span> <span class="n">sht</span><span class="p">,</span> <span class="n">rownum</span><span class="p">):</span>
+        <span class="n">row_data</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;ngc_id&#39;</span><span class="p">:</span> <span class="n">sht</span><span class="o">.</span><span class="n">cell</span><span class="p">(</span><span class="n">rownum</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="s1">&#39;sett_id&#39;</span><span class="p">:</span> <span class="n">sht</span><span class="o">.</span><span class="n">cell</span><span class="p">(</span><span class="n">rownum</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="s1">&#39;fuel_type&#39;</span><span class="p">:</span> <span class="n">sht</span><span class="o">.</span><span class="n">cell</span><span class="p">(</span><span class="n">rownum</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="s1">&#39;eff_from&#39;</span><span class="p">:</span> <span class="n">_mkdate</span><span class="p">(</span><span class="n">wbb</span><span class="p">,</span> <span class="n">sht</span><span class="p">,</span> <span class="n">rownum</span><span class="p">,</span><span class="mi">3</span><span class="p">),</span>
+            <span class="s1">&#39;eff_to&#39;</span><span class="p">:</span> <span class="n">_mkdate</span><span class="p">(</span><span class="n">wbb</span><span class="p">,</span> <span class="n">sht</span><span class="p">,</span> <span class="n">rownum</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="n">row_data</span><span class="p">[</span><span class="s1">&#39;sett_id&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">42</span><span class="p">:</span>
+            <span class="k">del</span><span class="p">(</span><span class="n">row_data</span><span class="p">[</span><span class="s1">&#39;sett_id&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">units</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row_data</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="PowerPackUnits"><a class="viewcode-back" href="../../../code.html#pywind.bmreports.PowerPackUnits">[docs]</a><span class="k">class</span> <span class="nc">PowerPackUnits</span><span class="p">(</span><span class="n">BaseUnitClass</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Download the latest Power Pack modules spreadsheet and make the</span>
+<span class="sd">        list of stations available as a list.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">XLS_URL</span> <span class="o">=</span> <span class="s1">&#39;http://www.bmreports.com/bsp/staticdata/PowerParkModules.xls&#39;</span>
+    <span class="n">SHEET_NAME</span> <span class="o">=</span> <span class="s2">&quot;Sheet1&quot;</span>
+
+    <span class="k">def</span> <span class="nf">_extract_row_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wbb</span><span class="p">,</span> <span class="n">sht</span><span class="p">,</span> <span class="n">rownum</span><span class="p">):</span>
+        <span class="n">row_data</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;sett_id&#39;</span><span class="p">:</span> <span class="n">sht</span><span class="o">.</span><span class="n">cell</span><span class="p">(</span><span class="n">rownum</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="s1">&#39;ngc_id&#39;</span><span class="p">:</span> <span class="n">sht</span><span class="o">.</span><span class="n">cell</span><span class="p">(</span><span class="n">rownum</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">sht</span><span class="o">.</span><span class="n">cell</span><span class="p">(</span><span class="n">rownum</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="s1">&#39;reg_capacity&#39;</span><span class="p">:</span> <span class="n">sht</span><span class="o">.</span><span class="n">cell</span><span class="p">(</span><span class="n">rownum</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="s1">&#39;date_added&#39;</span><span class="p">:</span> <span class="n">_mkdate</span><span class="p">(</span><span class="n">wbb</span><span class="p">,</span> <span class="n">sht</span><span class="p">,</span> <span class="n">rownum</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+            <span class="s1">&#39;bmunit&#39;</span><span class="p">:</span> <span class="n">yesno</span><span class="p">(</span><span class="n">sht</span><span class="o">.</span><span class="n">cell</span><span class="p">(</span><span class="n">rownum</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;cap&#39;</span><span class="p">:</span> <span class="n">sht</span><span class="o">.</span><span class="n">cell</span><span class="p">(</span><span class="n">rownum</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span><span class="o">.</span><span class="n">value</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="n">row_data</span><span class="p">[</span><span class="s1">&#39;ngc_id&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">units</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row_data</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, David Reid.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
