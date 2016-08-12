@@ -1,0 +1,4 @@
+lxml
+xlrd
+html5lib
+requests
