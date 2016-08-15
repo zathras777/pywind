@@ -1,5 +1,8 @@
 # coding=utf-8
-""" Unit data from BM Reports """
+"""
+.. module:: bmreports.unit
+Unit data from BM Reports
+"""
 #
 # Copyright 2013, 2014 david reid <zathrasorama@gmail.com>
 #

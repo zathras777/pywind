@@ -17,6 +17,13 @@
 #
 #
 
+""" BMReports make available a number of reports, but this module provides
+access to their report on output by generation type for the 3 periods,
+- instant
+- last hour
+- last 24 hours
+
+"""
 
 from datetime import datetime, timedelta
 
@@ -24,21 +31,24 @@ from .utils import parse_response_as_xml
 from pywind.ofgem.utils import get_url
 
 
-class FuelRecord(object):
-    FUELS = {'CCGT': 'Combined Cycle Gas Turbine',
-             'OCGT': 'Open Cycle Gas Turbine',
-             'OIL': 'Oil',
-             'COAL': 'Coal',
-             'NUCLEAR': 'Nuclear',
-             'WIND': 'Wind',
-             'PS': 'Pumped Storage',
-             'NPSHYD': 'Non Pumped Storage Hydro',
-             'OTHER': 'Other',
-             'INTFR': 'Import from France',
-             'INTIRL': 'Import from Ireland',
-             'INTNED': 'Import from the Netherlands',
-             'INTEW': 'East/West Interconnector'
-    }
+class GenerationRecord(object):
+    """ Class to record details of a single generation type record.
+    """
+    FUELS = {
+        'CCGT': 'Combined Cycle Gas Turbine',
+        'OCGT': 'Open Cycle Gas Turbine',
+        'OIL': 'Oil',
+        'COAL': 'Coal',
+        'NUCLEAR': 'Nuclear',
+        'WIND': 'Wind',
+        'PS': 'Pumped Storage',
+        'NPSHYD': 'Non Pumped Storage Hydro',
+        'OTHER': 'Other',
+        'INTFR': 'Import from France',
+        'INTIRL': 'Import from Ireland',
+        'INTNED': 'Import from the Netherlands',
+        'INTEW': 'East/West Interconnector'
+        }
 
     def __init__(self, el):
         """ Object to represent a single fuel record entry. These
@@ -46,7 +56,7 @@ class FuelRecord(object):
               <FUEL TYPE="OTHER" IC="N" VAL="13528" PCT="1.6"/>
         """
         self.type = el.get("TYPE")
-        self.ic = el.get("IC")
+        self.icr = el.get("IC")
         self.val = el.get("VAL")
         self.pct = el.get("PCT")
 
@@ -54,62 +64,76 @@ class FuelRecord(object):
         return u"%s" % self.FUELS[self.type]
 
     def as_dict(self):
-        return {'code': self.type, 'name': self.FUELS[self.type],
-                'value': self.val, 'percent': self.pct}
+        """ Return data as a dict. """
+        return {'code': self.type,
+                'name': self.FUELS[self.type],
+                'value': self.val,
+                'percent': self.pct,
+                'interconnector': self.icr == 'Y'}
 
 
 class GenerationPeriod(object):
+    """ The basic report contains information on 3 different periods. Each will
+    be represented by an instance of this class.
+    """
     DT1 = "%Y-%m-%d %H:%M:%S"
     DT2 = "%Y-%m-%d %H:%M"
     NAMES = {'INST': 'instant', 'HH': 'halfhour', 'LAST24H': '24hours'}
 
-    def __init__(self, el):
-        self.tag = el.tag
-        self.total = int(el.get("TOTAL"))
-        if hasattr(self, self.tag):
-            getattr(self, self.tag)(el)
+    def __init__(self, elm):
+        self.tag = elm.tag
+        self.total = int(elm.get("TOTAL"))
+        self.dtt = None
+        self.start = None
+        self.finish = None
+        if hasattr(self, self.tag.lower()):
+            getattr(self, self.tag.lower())(elm)
         self.data = []
-        for f in el.getchildren():
-            self.data.append(FuelRecord(f))
+        for frr in elm.getchildren():
+            self.data.append(GenerationRecord(frr))
 
-    def INST(self, el):
+    def inst(self, elm):
         """ Store the time for an instant record.
             :param el: the element to parse
         """
-        self.dt = datetime.strptime(el.get("AT"), self.DT1)
+        self.dtt = datetime.strptime(elm.get("AT"), self.DT1)
 
-    def HH(self, el):
+    def hh(self, elm):
         """ Store the start and finish times for a half hour record.
             :param el: the element to parse
         """
-        dd = el.get("SD")
-        hh = el.get("AT")
-        self.start = datetime.strptime(dd + ' ' + hh[:5], self.DT2)
-        self.finish = datetime.strptime(dd + ' ' + hh[6:], self.DT2)
+        ddd = elm.get("SD")
+        hhh = elm.get("AT")
+        self.start = datetime.strptime(ddd + ' ' + hhh[:5], self.DT2)
+        self.finish = datetime.strptime(ddd + ' ' + hhh[6:], self.DT2)
 
-    def LAST24H(self, el):
+    def last24h(self, elm):
         """ Store the start and finish date/time records for a 24 hour record.
             :param el: the element to parse
         """
-        dd = el.get("FROM_SD")
-        hh = el.get("AT")
-        self.start = datetime.strptime(dd + ' ' + hh[:5], self.DT2)
-        self.finish = datetime.strptime(dd + ' ' + hh[6:], self.DT2) + timedelta(1)
+        ddd = elm.get("FROM_SD")
+        hhh = elm.get("AT")
+        self.start = datetime.strptime(ddd + ' ' + hhh[:5], self.DT2)
+        self.finish = datetime.strptime(ddd + ' ' + hhh[6:], self.DT2) + timedelta(1)
 
     def keyname(self):
+        """ Return the full name of the tag. """
         return self.NAMES[self.tag]
 
     def as_dict(self):
-        rv = {'total': self.total, 'data': [f.as_dict() for f in self.data]}
+        """ Return the data as a dict. """
+        drv = {'total': self.total, 'data': [f.as_dict() for f in self.data]}
         if self.tag == 'INST':
-            rv['time'] = self.dt
+            drv['time'] = self.dtt
         else:
-            rv['start'] = self.start
-            rv['finish'] = self.finish
-        return rv
+            drv['start'] = self.start
+            drv['finish'] = self.finish
+        return drv
 
 
 class GenerationData(object):
+    """ Class to allow access to the report and parse the response into usable structures.
+    """
     URL = "http://www.bmreports.com/bsp/additional/soapfunctions.php"
     PARAMS = {'element': 'generationbyfueltypetable'}
 
