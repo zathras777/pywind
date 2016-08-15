@@ -1,7 +1,7 @@
 """
 Utility functions used by more than module within pywind.
 """
-
+import argparse
 import requests
 
 
@@ -37,3 +37,14 @@ def get_or_post_a_url(url, post=False, **kwargs):
         raise Exception("Returned URL was from a different URL than requested.\n" +
                         "Requested: {}\nActual:  {}".format(url, req.url))
     return req
+
+
+def commandline_parser(help_text):
+    """
+    Simple function to create a command line parser with some generic options.
+    """
+    parser = argparse.ArgumentParser(description=help_text)
+    parser.add_argument('--debug', action='store_true', help='Enable debugging')
+    parser.add_argument('--request-debug', action='store_true', help='Enable debugging of requests')
+    parser.add_argument('--log-filename', action='store', help='Filename to write logging to')
+    return parser
