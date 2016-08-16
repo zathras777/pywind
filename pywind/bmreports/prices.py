@@ -15,63 +15,44 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import date
+""" BMReports make the system electricity prices available. This module contains
+classes to access those reports.
+"""
 
-from pywind.ofgem.utils import get_url
-from .utils import xpath_gettext, parse_response_as_xml
+from datetime import date, datetime
+
+from pywind.utils import get_or_post_a_url, parse_response_as_xml
 
 
 class SystemPrices(object):
+    """ Class to get the electricity prices from BMreports. """
     URL = 'http://www.bmreports.com/bsp/additional/soapfunctions.php'
 
-    def __init__(self, dt=None):
-        self.dt = dt or date.today()
+    def __init__(self, dtt=None):
+        self.dtt = dtt or date.today()
         self.prices = []
 
     def get_data(self):
-        data = {'element': 'SYSPRICE', 'dT': self.dt.strftime("%Y-%m-%d")}
-        req = get_url(self.URL, data)
-        if req is None or req.code != 200:
-            print("Unable to get data...")
-            return False
-        return self._process(req)
-
-    def _process(self, req):
-        """ The XML data returned from the request should contain a series of
-            ELEMENT elements
-
-            <ELEMENT>
-              <SD>2013-04-09</SD>
-              <SP>1</SP>
-              <SSP>48.90000</SSP>
-              <SBP>67.57225</SBP>
-              <BD>F</BD>
-              <PDC>A</PDC>
-              <NIV>353.6212</NIV>
-              <SPPA>0.00</SPPA>
-              <BPPA>0.00</BPPA>
-              <OV>881.007</OV>
-              <BV>-528.289</BV>
-              <TOV>527.385</TOV>
-              <TBV>-528.289</TBV>
-              <ASV>0.000</ASV>
-              <ABV>0.000</ABV>
-              <TASV>0.000</TASV>
-              <TABV>0.000</TABV>
-            </ELEMENT>
-
-            Currently only the SSP and SBP subelements are recorded.
-
-            :param: req: The request object to process.
-        """
-        root = parse_response_as_xml(req)
+        """ Get the data from the remote server. """
+        data = {'element': 'SYSPRICE',
+                'dT': self.dtt.strftime("%Y-%m-%d")}
+        resp = get_or_post_a_url(self.URL, params=data)
+        root = parse_response_as_xml(resp)
         if root is None:
             return False
 
-        for e in root.xpath('.//ELEMENT'):
-            data = {'period': xpath_gettext(e, './/SP', 99),
-                    'sbp': xpath_gettext(e, './/SBP', 0),
-                    'ssp': xpath_gettext(e, './/SSP', 0),
-            }
+        for elm in root.xpath('.//ELEMENT'):
+            data = {}
+            for elm2 in elm.getchildren():
+                if elm2.tag == 'SP':
+                    data['period'] = int(elm2.text)
+                elif elm2.tag == 'SD':
+                    data['date'] = datetime.strptime(elm2.text, "%Y-%m-%d")
+                else:
+                    data[elm2.tag.lower()] = elm2.text
             self.prices.append(data)
         return len(self.prices) > 0
+
+    def as_dict(self):
+        """ Return the data as a dict. """
+        return {'date': self.dtt, 'data': self.prices}

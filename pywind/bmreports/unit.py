@@ -19,15 +19,14 @@ Unit data from BM Reports
 # limitations under the License.
 
 import os
-
 import requests
 import xlrd
 
 from datetime import timedelta, date, datetime
 from tempfile import NamedTemporaryFile
 
-from .utils import xpath_gettext, parse_response_as_xml, yesno
 from pywind.ofgem.utils import get_url
+from pywind.utils import parse_response_as_xml
 
 
 def _mkdate(book, sheet, row, col):
@@ -35,6 +34,21 @@ def _mkdate(book, sheet, row, col):
     if val == '':
         return None
     return datetime(*xlrd.xldate_as_tuple(val, book.datemode)).date()
+
+
+def _yesno(val):
+    """ Convert yes/no into True/False """
+    return val.lower() in ['yes', 'true']
+
+
+def _walk_nodes(elm):
+    data = {}
+
+    for elm2 in elm.getchildren():
+        data[elm2.tag.lower()] = _walk_nodes(elm2)
+    if elm.text is not None:
+        data['value'] = elm.text
+    return data
 
 
 class UnitData(object):
@@ -151,27 +165,15 @@ class UnitData(object):
         if root is None:
             return False
 
-        ELEMENTS = [
-            ['VOLUME//BID_VALUES//ORIGINAL//TOTAL', 'bid', 'volume'],
-            ['VOLUME//OFFER_VALUES//ORIGINAL//TOTAL', 'offer', 'volume'],
-            ['CASHFLOW//BID_VALUES//TOTAL', 'bid', 'cashflow'],
-            ['CASHFLOW//OFFER_VALUES//TOTAL', 'offer', 'cashflow']
-        ]
-
         for bmu in root.xpath(".//ACCEPT_PERIOD_TOTS//*//BMU"):
-            bmud = {'id': bmu.get('ID'),
-                    'type': bmu.get('TYPE'),
-                    'lead': bmu.get('LEAD_PARTY'),
-                    'ngc': bmu.get('NGC_NAME'),
-                    'bid': {},
-                    'offer': {}
-            }
-            for el in ELEMENTS:
-                val = xpath_gettext(bmu, el[0], 0)
-                if val != 0:
-                    bmud[el[1]][el[2]] = val
-            if not 'volume' in bmud['bid'] and not 'volume' in bmud['offer']:
-                continue
+            bmud = {
+                'id': bmu.get('ID'),
+                'type': bmu.get('TYPE'),
+                'lead': bmu.get('LEAD_PARTY'),
+                'ngc': bmu.get('NGC_NAME'),
+                }
+            bmud['cashflow'] = _walk_nodes(bmu.xpath('.//CASHFLOW')[0])
+            bmud['volume'] = _walk_nodes(bmu.xpath('.//VOLUME')[0])
             self.data.append(bmud)
         return len(self.data) > 0
 
@@ -253,7 +255,7 @@ class PowerPackUnits(BaseUnitClass):
             'name': sht.cell(rownum, 2).value,
             'reg_capacity': sht.cell(rownum, 3).value,
             'date_added': _mkdate(wbb, sht, rownum, 4),
-            'bmunit': yesno(sht.cell(rownum, 5).value),
+            'bmunit': _yesno(sht.cell(rownum, 5).value),
             'cap': sht.cell(rownum, 6).value
         }
         if row_data['ngc_id'] == '':

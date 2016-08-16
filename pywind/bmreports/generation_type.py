@@ -27,8 +27,7 @@ access to their report on output by generation type for the 3 periods,
 
 from datetime import datetime, timedelta
 
-from .utils import parse_response_as_xml
-from pywind.ofgem.utils import get_url
+from pywind.utils import parse_response_as_xml, get_or_post_a_url
 
 
 class GenerationRecord(object):
@@ -145,10 +144,7 @@ class GenerationData(object):
     def get_data(self):
         """ Get data from the BM Reports website. Try 3 times.
         """
-        resp = get_url(self.URL, self.PARAMS)
-        if resp is None or resp.code != 200:
-            return
-
+        resp = get_or_post_a_url(self.URL, params=self.PARAMS)
         self.xml = parse_response_as_xml(resp)
         if self.xml is None:
             return
