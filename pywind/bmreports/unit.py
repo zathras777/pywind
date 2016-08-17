@@ -1,6 +1,5 @@
 # coding=utf-8
 """
-.. module:: bmreports.unit
 Unit data from BM Reports
 """
 #

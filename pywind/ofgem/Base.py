@@ -15,6 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=E1101
+# pylint: disable=E0611
 
 from __future__ import print_function
 
@@ -23,6 +25,8 @@ import sys
 from lxml import etree
 
 import html5lib
+from pprint import pprint
+
 import requests
 
 try:
@@ -71,11 +75,6 @@ def as_csv(obj, fld):
     return val
 
 
-#def as_csv_title(m):
-#    """ Return a string as a CSV column title. """
-#    return (m[0] if len(m) == 1 else m[1]).capitalize().replace('_', ' ')
-
-
 class OfgemField(object):
     """ Class to represent a field on an Ofgem form. """
     def __init__(self, elm=None):
@@ -114,12 +113,10 @@ class OfgemField(object):
 
     def set_value(self, what):
         """ Set a value for this field. """
-        if self.has_options:
-            self.set_option(what)
-        elif self.dropdown is not None:
-            self.dropdown.set_value(what)
-        else:
-            self.value = what
+        if self.dropdown is not None:
+            return self.dropdown.set_value(what)
+        self.value = what
+        return True
 
     def __str__(self):
         return "type {}, id {}, postback {}".format(self.type, self.idd, self.postback)
@@ -147,16 +144,20 @@ class OfgemSelectField(OfgemField):
             if opt.selected:
                 self.value = opt.value
 
-    def set_option(self, what):
+    def set_value(self, what):
         """ Set an option on the field. """
         if isinstance(what, int):
             what = "{:02d}".format(what)
+        changed = False
         for opt in self.options:
             if opt.label == what:
-                self.value = opt.value
+                if self.value != opt.value:
+                    self.value = opt.value
+                    changed = True
                 opt.selected = True
             else:
                 opt.selected = False
+        return changed
 
 
 class OfgemDropdown(object):
@@ -184,17 +185,22 @@ class OfgemDropdown(object):
     def set_value(self, value):
         """ We expect the val to be one or more of the possible options, i.e. text not indices. """
         self.current = []
+        update_rqd = False
         for val in [part.strip() for part in value.split(",")]:
+            if val in self.current:
+                continue
+            update_rqd = True
             if val in self.opts:
                 self.current.append(val)
-        self._set_value()
+        return self._set_value() if update_rqd else False
 
     def _set_value(self):
         """ Set the field value """
         if self.parent is None:
-            return
+            return False
         self.parent.value = ",".join(self.current)
         self.field.value = ",".join([str(self.opts[key]) for key in self.current])
+        return True
 
 
 class OfgemRadioField(OfgemField):
@@ -284,7 +290,7 @@ class FieldManager(object):
         """ Generate the data to post to server, as a string.
             NB quote is used as quote_plus fails.
         """
-        p_d = []
+        post_data = {}
         for fld in self:
             if 'divDropDown$ctl' in fld.name and 'HiddenIndices' not in fld.name:
                 continue
@@ -294,8 +300,12 @@ class FieldManager(object):
                 if fld.value is False:
                     continue
                 val = 'on'
-            p_d.append("{}={}".format(quote(fld.name), quote(val)))
-        return "&".join(p_d)
+#            print("{} => {}".format(fld.name, val))
+            post_data[quote(fld.name)] = quote(val)
+        print("\n\nDATA to be POSTed")
+        pprint(post_data)
+        print("\n\n")
+        return "&".join(["{}={}".format(key, post_data[key]) for key in post_data.keys()])
 
     def __iter__(self):
         for name in sorted(self.names):
@@ -311,7 +321,7 @@ class OfgemForm(object):
         if not url.startswith('https'):
             url = self.OFGEM_BASE + url
 
-#        requests.packages.urllib3.disable_warnings()
+        requests.packages.urllib3.disable_warnings()
 
         self.num = 1
         self.url = url
@@ -327,7 +337,6 @@ class OfgemForm(object):
         fld = self.fields.by_label(lbl)
         if fld is None:
             raise Exception("Unknown label '{}'".format(lbl))
-
         if '$txtValue' in fld.name:
             # Some fields have a checkbox that is set when the field is blank,
             # so as we're setting the value, clear the checkbox.
@@ -336,18 +345,34 @@ class OfgemForm(object):
             if cb_obj is not None:
                 cb_obj.value = False
 
-        fld.set_value(what)
-
-        if fld.postback:
-            self._update(fld.name)
+        if fld.set_value(what) is True:
+            if fld.postback:
+                self._update(fld.name)
 
     def get_data(self):
         """ Get data from the form. """
         self.set_value('page size', 25)
+#        fld = self.fields.by_name("ReportViewer$ctl04$ctl00")
+#        fld.value = 'View Report'
         self._update('ReportViewer$ctl04$ctl00')
+
+
+#https://www.renewablesandchp.ofgem.gov.uk/Reserved.ReportViewerWebControl.axd?
+## ReportSession=goiq4h452moinp554b0g1ln0
+#&Culture=2057
+#&CultureOverrides=True
+#&UICulture=2057
+#&UICultureOverrides=True
+#&ReportStack=1
+#&ControlID=81adeb57ee714e19a27f493c3791bd15
+#&OpType=Export
+#&FileName=CertificatesExternalPublicDataWarehouse
+#&ContentDisposition=OnlyHtmlInline
+#&Format=XML
 
         if self.export_url is None:
             return False
+        print(self.export_url)
         req = requests.get(self.export_url + 'XML', cookies=self.cookies)
         if req.status_code != 200:
             raise
@@ -372,15 +397,23 @@ class OfgemForm(object):
 
     def _update(self, name=''):
         """ Update the form. """
+        print("\n_UPDATE!!! {}\n".format(name))
+        print(self.action)
         self.fields.get_or_create('__EVENTTARGET', name)
         self.fields.get_or_create('ScriptManager1', "ScriptManager1|{}".format(name))
 
-        form_hdrs = {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'}
+        form_hdrs = {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                     'X-Requested-With': 'XMLHttpRequest',
+                     'Referer': self.action}
         try:
             req = requests.post(self.action,
                                 cookies=self.cookies,
                                 headers=form_hdrs,
                                 data=self.fields.post_data())
+            if req.url != self.action:
+                print("Asked for {}\ngot {}".format(self.action, req.url))
+                return
+
         except requests.exceptions.SSLError as err:
             raise Exception("SSL Error\n  Error: {}\n    URL: {}".
                             format(err.message, self.url))
@@ -393,24 +426,32 @@ class OfgemForm(object):
             poss = document.xpath('//input[@name="{}"]'.format(nmv))
             if len(poss) == 1:
                 self.fields.get_or_create(nmv, poss[0].get('value'))
+            else:
+                print("Unable to find {}".format(nmv))
 
         for scr in document.xpath('//script'):
+#            print(scr.text)
             if scr.text is None or 'Sys.Application' not in scr.text:
                 continue
             for jss in re.findall(r"Sys.Application.add_init\(function\(\) \{\n(.*)\n\}\);",
                                   scr.text):
+#                print(jss)
                 xpb = re.search('\"ExportUrlBase\":\"(.*?)\",', jss)
                 if xpb is not None:
+                    print("EXPORT_URL = {}".format(xpb.group(1)))
+                    print(xpb.groups())
                     self.export_url = xpb.group(1)
                     if not self.export_url.startswith('http'):
                         self.export_url = self.OFGEM_BASE + self.export_url
 
     def _process_response(self, response):
         """ Process a request. """
+        print("response:\n  {}\n  status_code = {}".format(response.url, response.status_code))
         if response.status_code != 200:
             raise Exception("Unable to get Ofgem form\nURL: {}\nGot {} but expected a 200".
                             format(self.url, response.status_code))
 
+#        print("content = {}".format(response.content))
         self.cookies = response.cookies
         document = html5lib.parse(response.content,
                                   treebuilder="lxml",
@@ -420,10 +461,13 @@ class OfgemForm(object):
         if len(forms) == 0:
             raise Exception("No form found in returned data from '{}'".format(self.url))
 
+        print(forms)
         _form = forms[0]
         labels = {}
         self.action = _form.get('action', self.url)
-        if not self.action.startswith('http'):
+        if self.action.startswith('./'):
+            self.action = self.OFGEM_BASE + self.action[2:]
+        elif not self.action.startswith('http'):
             self.action = self.OFGEM_BASE + self.action
 
         for elm in _form.xpath('//tr[@isparameterrow="true"]/td'):

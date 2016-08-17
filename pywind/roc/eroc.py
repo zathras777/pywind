@@ -1,6 +1,5 @@
-"""
-.. module:: pywind.roc
-"""
+""" eroc.py """
+
 from datetime import datetime
 import html5lib
 
@@ -20,7 +19,21 @@ def volume_to_int(txt):
 
 class EROCPrices(object):
     """
-    Class that allows access to eROC ROC auction prices.
+    The EROCProces class provides access to the auction data from the eRIC website. \
+    Once created the :func:`get_prices()` is called to get the latest infrmation from their \
+    website and parse the results into period prices.
+
+    Once parsed period information can be accessed by using the class object as a dict, i.e. \
+    eroc[200701] would return the average proce for auction(s) held in Jan 2007.
+
+    .. :code:
+
+    >>> from pywind.roc.eroc import EROCPrices
+    >>> eroc = EROCPrices()
+    >>> eroc.get_prices()
+    True
+    >>> eroc[200701]
+
     """
     URL = 'http://www.epowerauctions.co.uk/erocrecord.htm'
 
@@ -31,6 +44,12 @@ class EROCPrices(object):
     def process_file(self, local_file):
         """
         Process a local HTML file.
+
+        .. :note::Mainly used in development/testing.
+
+        :param local_file: Filename to be parsed.
+        :returns: True or False
+        :rtype: boolean
         """
         self.auctions = []
         self.periods = {}
@@ -41,6 +60,9 @@ class EROCPrices(object):
     def get_prices(self):
         """
         Get the recent prices.
+
+        :return: True or False
+        :rtype: boolean
         """
         resp = get_or_post_a_url(self.URL)
         self._parse_content(resp.content)
@@ -88,6 +110,8 @@ class EROCPrices(object):
     def as_table_string(self):
         """
         Function to return a nicely formatted period and average price.
+
+        :returns: String representation of data as a table.
         """
         sss = ''
         for prd in sorted(self.periods.keys()):

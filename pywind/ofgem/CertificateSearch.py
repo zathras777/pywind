@@ -21,7 +21,7 @@ from __future__ import print_function
 
 from lxml import etree
 
-from .Base import OfgemForm
+from pywind.ofgem.form import OfgemForm
 from .Certificates import CertificatesList
 
 
@@ -30,7 +30,7 @@ MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 
 
 class CertificateSearch(object):
     """ Class that queries ofgem for certificate data. If it succeeds then
-        the returned certificates are available in the .certifcates member.
+        the returned certificates are available in the .certificates member.
 
         The data can be restricted by using the following keywords when
         creating the class instance
@@ -48,7 +48,9 @@ class CertificateSearch(object):
 
     def __init__(self, filename=None):
         self.cert_list = None
-        self.output_fn = None
+        self.has_data = False
+        self.form = None
+
         if filename is not None:
             self.parse_filename(filename)
         else:
@@ -56,6 +58,12 @@ class CertificateSearch(object):
 
     def __len__(self):
         return 0 if self.cert_list is None else len(self.cert_list)
+
+    def start(self):
+        """ Retrieve the form from Ofgem website so we can start updating it.
+        """
+        if self.form is not None:
+            self.form.get()
 
     def set_month(self, month):
         """ Set month for certificates (start and finish)"""
@@ -108,17 +116,19 @@ class CertificateSearch(object):
 
     def get_data(self):
         """ Get data from the ofgem form """
-        if not self.form.get_data():
+        if not self.form.submit():
             return False
+        self.has_data = True
+        self.cert_list = CertificatesList(data=self.form.raw_data)
 
-        doc = etree.fromstring(self.form.data)
-
-        if self.output_fn:
-            with open(self.output_fn, "w") as fhh:
-                fhh.write("{}".format(etree.tostring(doc, pretty_print=True)))
-            print("returned XML saved to '{}'".format(self.output_fn))
-
-        self.cert_list = CertificatesList(data=self.form.data)
+    def save_output(self, filename):
+        if not self.has_data:
+            return False
+        doc = etree.fromstring(self.form.raw_data)
+        with open(filename, "w") as fhh:
+            fhh.write("{}".format(etree.tostring(doc, pretty_print=True)))
+        print("returned XML saved to '{}'".format(filename))
+        return True
 
     def parse_filename(self, filename):
         """ Parse a file of certificates. """

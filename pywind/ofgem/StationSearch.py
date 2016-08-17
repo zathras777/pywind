@@ -21,13 +21,13 @@
 import copy
 from lxml import etree
 
-from .Base import OfgemForm
+from pywind.ofgem.form import OfgemForm
 from .Station import Station
 
 
 class StationSearch(object):
     """ Class that allows easy searching of Ofgem stations and manages results. """
-    START_URL = 'ReportViewer.aspx?ReportPath=/Renewables/Accreditation/" +' \
+    START_URL = 'ReportViewer.aspx?ReportPath=/Renewables/Accreditation/' + \
                 'AccreditedStationsExternalPublic&ReportVisibility=1&ReportCategory=1'
 
     def __init__(self):
@@ -43,24 +43,31 @@ class StationSearch(object):
         if 0 >= item < len(self.stations):
             return self.stations[item]
 
+    def start(self):
+        """ Retrieve the form from Ofgem website so we can start updating it.
+        """
+        if self.form is not None:
+            self.form.get()
+
     def get_data(self):
         """ Get data from form. """
-        if self.form.get_data():
-            doc = etree.fromstring(self.form.data)
-            # There are a few stations with multiple generator id's, separated by '\n' so
-            # capture them and add each as a separate entry.
-            for detail in doc.xpath("//*[local-name()='Detail']"):
-                stt = Station(detail)
-                if b'\n' in stt.generator_id:
-                    ids = [x.strip() for x in stt.generator_id.split(b'\n')]
-                    stt.generator_id = ids[0]
-                    for _id in ids[1:]:
-                        _st = copy.copy(stt)
-                        _st.generator_id = _id
-                        self.stations.append(_st)
-                self.stations.append(stt)
-            return True
-        return False
+        if not self.form.submit():
+            return False
+
+        doc = etree.fromstring(self.form.raw_data)
+        # There are a few stations with multiple generator id's, separated by '\n' so
+        # capture them and add each as a separate entry.
+        for detail in doc.xpath("//*[local-name()='Detail']"):
+            stt = Station(detail)
+            if b'\n' in stt.generator_id:
+                ids = [x.strip() for x in stt.generator_id.split(b'\n')]
+                stt.generator_id = ids[0]
+                for _id in ids[1:]:
+                    _st = copy.copy(stt)
+                    _st.generator_id = _id
+                    self.stations.append(_st)
+            self.stations.append(stt)
+        return True
 
     def filter_technology(self, what):
         """ Filter stations based on technology. """

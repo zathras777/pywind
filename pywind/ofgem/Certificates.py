@@ -104,7 +104,7 @@ class Certificates(object):
     def station_details(self):
         S_FIELDS = ['generator_id', 'name', 'scheme', 'capacity', 'country', 'technology', 'output']
         return {fld: getattr(self, fld) for fld in S_FIELDS}
-          
+
     def as_string(self):
         s = ''
         for f in self.FIELDS:
@@ -132,9 +132,9 @@ class CertificateStation(object):
         self.name = name
         self.generator_id = g_id
         self.scheme = _scheme_from_generator_id(g_id)
-        self.capacity = capacity      
+        self.capacity = capacity
         self.certs = []
-        
+
     def __len__(self):
         return len(self.certs)
 

@@ -1,4 +1,14 @@
-""" DECC information module """
+"""
+.. module:: pwind.decc.Report
+    :synopsis: DECC Module of PyWind.
+
+.. moduleauthor:: David Reid <zathrasorama@gmail.com>
+
+The DECC publish monthly extracts of planning applications for renewable projects.
+This module aims to make accessing this report simpler.
+
+https://www.gov.uk/government/publications/renewable-energy-planning-database-monthly-extract
+"""
 
 from __future__ import print_function
 
@@ -15,7 +25,9 @@ from pywind.utils import get_or_post_a_url
 
 
 def field_to_attr(fld):
-    """ Convert the field title into an attribute string. """
+    """
+    Convert the field title into an attribute string.
+    """
     fld = fld.lower()
     for char in [' ', '-', '/']:
         fld = fld.replace(char, '_')
@@ -23,7 +35,9 @@ def field_to_attr(fld):
 
 
 class DeccRecord(object):
-    """ Simple class to hold details of one DECC station. """
+    """
+    Simple class to hold details of one DECC station.
+    """
     DATE_FIELDS = ('record_last_updated_(dd_mm_yyyy)',
                    'planning_application_submitted',
                    'planning_application_withdrawn',
@@ -82,7 +96,9 @@ class DeccRecord(object):
 #        setattr(self, 'lon', latlon.lon)
 
     def _process_value(self, attr, val):
-        """ Take the raw value and which attribute it is for and convert as required. """
+        """
+        Take the raw value and which attribute it is for and convert as required.
+        """
         if attr in self.BOOLEAN_FIELDS:
             return False if val.lower() in ['false', 'no'] else True
         if attr in self.DATE_FIELDS:
@@ -108,7 +124,10 @@ class DeccRecord(object):
 
 
 class MonthlyExtract(object):
-    'https://www.gov.uk/government/collections/renewables-statistics'
+    """
+    The MonthlyExtract class allows the current monthly data to be easily retrieved and parsed.
+
+    """
     BASE_URL = "https://www.gov.uk"
     URL = "https://www.gov.uk/government/publications/renewable-energy-planning-database-monthly-extract"
 
@@ -119,6 +138,9 @@ class MonthlyExtract(object):
         self._find_available()
 
     def __len__(self):
+        """
+        Return the number of DECC records that have been extracted. Will be 0 until get_data() has been called.
+        """
         return len(self.records)
 
     def get_data(self):
@@ -149,7 +171,9 @@ class MonthlyExtract(object):
         return True
 
     def _find_available(self):
-        """ Get the URL and period for the currently available download. """
+        """
+        Get the URL and period for the currently available download.
+        """
         response = get_or_post_a_url(self.URL)
         document = html5lib.parse(response.content,
                                   treebuilder="lxml",
