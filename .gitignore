@@ -37,4 +37,5 @@ nosetests.xml
 
 *~
 ofgem.html
+docs/_build
 
