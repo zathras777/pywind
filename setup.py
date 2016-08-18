@@ -7,7 +7,7 @@ from pywind import __version__
 
 # Get the long description from the relevant file
 here = path.abspath(path.dirname(__file__))
-with io.open(path.join(here, 'README.md'), encoding='utf-8') as f:
+with io.open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 
@@ -30,6 +30,10 @@ setup(
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.4',
     ],
+    entry_points={
+        'console_scripts': ['pywind=pywind.command_line:main']
+    },
+
     test_suite='tests',
     license='Unlicense',
 )

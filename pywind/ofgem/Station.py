@@ -33,22 +33,22 @@ class Station(object):
         'accreditation_dt', 'commission_dt', 'developer',
         'developer_address', 'address', 'fax'
     ]
-    mapping = [
-        ['GeneratorID', 'generator_id'],
-        ['StatusName', 'status'],
-        ['GeneratorName', 'name'],
-        ['SchemeName', 'scheme'],
-        ['Capacity'],
-        ['Country'],
-        ['TechnologyName', 'technology'],
-        ['OutputType', 'output'],
-        ['AccreditationDate', 'accreditation_dt'],
-        ['CommissionDate', 'commission_dt'],
-        ['textbox6', 'developer'],
-        ['textbox61', 'developer_address'],
-        ['textbox65', 'address'],
-        ['FaxNumber', 'fax']
-    ]
+    mapping = (
+        ('GeneratorID', 'generator_id'),
+        ('StatusName', 'status'),
+        ('GeneratorName', 'name'),
+        ('SchemeName', 'scheme'),
+        ('Capacity', '', 'float'),
+        ('Country',),
+        ('TechnologyName', 'technology'),
+        ('OutputType', 'output'),
+        ('AccreditationDate', 'accreditation_dt', 'date'),
+        ('CommissionDate', 'commission_dt', 'date'),
+        ('textbox6', 'developer'),
+        ('textbox61', 'developer_address'),
+        ('textbox65', 'address'),
+        ('FaxNumber', 'fax')
+    )
 
     def __init__(self, node):
         for m in self.mapping:

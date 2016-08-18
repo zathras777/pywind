@@ -16,6 +16,10 @@
 # limitations under the License.
 #
 
+# Aug 2016
+#
+# Updated for recent changes in pywind structure.
+
 # Dec 2015 Changes
 #
 # - year now defaults to current year
@@ -24,17 +28,21 @@
 # - updated output for new object structure
 # - verbose flag added to output full output
 
-import argparse
+from __future__ import print_function
+
 import csv
 from datetime import datetime
 
+from pywind.log import setup_logging
 from pywind.ofgem.Base import to_string
 from pywind.ofgem.CertificateSearch import CertificateSearch
 from pywind.ofgem.Certificates import CertificateStation
+from pywind.utils import commandline_parser
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Get ofgem certificates for a given month & year')
+def main():
+    parser = commandline_parser('Get ofgem certificates for a given month & year')
+
     parser.add_argument('--month', type=int, default=1, action='store', help='Month (as a number)')
     parser.add_argument('--year', type=int, default=datetime.today().year, action='store', help='Year')
     parser.add_argument('--generator', action='store', help='Generator ID to search for')
@@ -44,13 +52,13 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', action='store_true', help='Show verbose output')
 
     args = parser.parse_args()
-
+    setup_logging(args.debug, request_logging=args.request_debug)
     if args.filename is None:
         print("Contacting Ofgem and preparing to search.\n")
         ocs = CertificateSearch()
+        ocs.start()
 
-        crit = "Searching Ofgem Certificates: "
-        crits = []
+        crits = ["Searching Ofgem Certificates: "]
 
         if args.scheme:
             ocs.filter_scheme(args.scheme)
@@ -60,7 +68,7 @@ if __name__ == '__main__':
             ocs.filter_generator_id(args.generator.upper())
             crits.append("\n\tgenerator id is '%s'" % args.generator.upper())
 
-        if args.month and  args.year:
+        if args.month and args.year:
             ocs.set_period(args.year, args.month)
             crits.append('\n\tperiod should be {} {}'.format(args.month, args.year))
         else:
@@ -93,3 +101,5 @@ if __name__ == '__main__':
                 csv_writer.writerows(s.as_csvrow())
         print("Output saved to file {} [CSV]".format(args.output))
 
+
+main()

@@ -71,7 +71,9 @@ class OfgemForm(object):
             Given how slow the parsing of a 3M HTML page is, try and use the
             X-MicrosoftAjax: Delta=true header to get smaller blocks for processing.
         """
-        self.form_data.set_value_by_label('Page Size', 25)
+        is_set, upd = self.form_data.set_value_by_label('Page Size', '25')
+        if is_set is False:
+            return False
         response = self._do_post(True)
         if response is None:
             return False
@@ -87,11 +89,9 @@ class OfgemForm(object):
         self.raw_data = response.content
         return True
 
-
-
     def set_value(self, lbl, value):
         is_set, cb_rqd = self.form_data.set_value_by_label(lbl, value)
-        self.logger.info("set_value_by_label -> %s, %s", is_set, cb_rqd)
+        self.logger.info("set_value_by_label [%s] -> %s, %s", lbl, is_set, cb_rqd)
         if is_set and cb_rqd:
             return self.update()
         return is_set

@@ -2,14 +2,27 @@
 import logging
 
 
-def setup_logging(debug=False, stdout=True, request_logging=False):
-    """ Setup the logging for pywind. """
+def setup_logging(debug=False, stdout=True, request_logging=False,
+                  filename=None):
+    """ Setup the logging for pywind.
+
+    :param debug: Enable debug level messages (default False)
+    :param stdout: Enable logging to stdout (default True)
+    :param request_logging: Enable full logging of network requests (default False)
+    :param filename: Filename to use for log.
+    """
     logger = logging.getLogger('pywind')
     logger.setLevel(logging.INFO if debug is False else logging.DEBUG)
 
     if stdout:
         stdh = logging.StreamHandler()
         logger.addHandler(stdh)
+
+    if filename is not None:
+        fileh = logging.FileHandler(filename)
+        filefmt = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        fileh.setFormatter(filefmt)
+        logger.addHandler(fileh)
 
     if request_logging:
         try:

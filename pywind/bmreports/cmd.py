@@ -6,8 +6,8 @@ from pywind.bmreports.unit import UnitData
 from pywind.utils import multi_level_get
 
 
-def bm_generation_type(cmd, args):
-    print(cmd[0] + "\n")
+def bm_generation_type(args):
+    print("BMReport Generation Type\n")
     gd = GenerationData()
     gd.get_data()
     data = gd.as_dict()
@@ -31,8 +31,8 @@ def bm_generation_type(cmd, args):
         print("\n")
 
 
-def bm_systemprices(cmd, args):
-    print(cmd[0] + "\n")
+def bm_systemprices(args):
+    print("BMReport System Price Data\n")
     if args.date is not None:
         spp = SystemPrices(dtt=args.date)
     else:
@@ -49,8 +49,8 @@ def bm_systemprices(cmd, args):
         print(ROW_FMT.format(str(prc['period']), prc['sbp'], prc['ssp']))
 
 
-def bm_unitdata(cmd, args):
-    print(cmd[0] + "\n")
+def bm_unitdata(args):
+    print("BMReport Unit Constraint Data\n")
     udd = UnitData()
     if udd.get_data() is False:
         print("Unable to get unit data.")

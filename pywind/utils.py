@@ -103,7 +103,11 @@ def commandline_parser(help_text):
     parser.add_argument('--request-debug', action='store_true', help='Enable debugging of requests')
     parser.add_argument('--log-filename', action='store', help='Filename to write logging to')
     parser.add_argument('--date', type=valid_date, help='Date. (yyyy-mm-dd format)')
-
+    parser.add_argument('--period', type=int, help='Period (format is YYYYMM)')
+    parser.add_argument('--scheme', choices=['REGO', 'RO'], help='Ofgem Scheme')
+    parser.add_argument('--output', help='Export filename')
+    parser.add_argument('--format', choices=['csv', 'xml'], help='Data Export Format')
+    parser.add_argument('--input', help='Filename to parse')
     return parser
 
 
@@ -147,3 +151,69 @@ def multi_level_get(the_dict, key, default=None):
 
     return here.get(lvls[-1], default)
 
+
+def map_xml_to_dict(xml_node, mapping):
+    """
+    Given an XML node, create a dict using the mapping of attributes/elements supplied.
+
+    The format of each mapping item is a tuple of up to 3 components,
+        - xml attribute
+        - key for dict (optional)
+        - type of data expected (optional)
+
+    If the key name is not supplied, the lower cased xml attribute will be used.
+    If the type is not given it will be assumed to be a string.
+
+    :param xml_node: The XML node to parse
+    :param mapping: Iterable of xml element
+    :returns: Dict of successfully extracted data
+    :rtype: dict
+    """
+    rv_dict = {}
+    for map in mapping:
+        val = xml_node.get(map[0], None)
+        key = map[1] if len(map) > 1 and map[1] != '' else map[0].lower()
+        if val is not None:
+            val = val.strip().encode('utf-8')
+            if len(val) == 0 or val == 'N/A':
+                val = None if len(map) < 4 else map[3]
+            else:
+                typ = map[2] if len(map) > 2 and map[2] != '' else 'str'
+                try:
+                    val = _convert_type(val, typ)
+                except ValueError:
+                    print("Unable to convert {} into a {} from XML attribute {} [{}]".format(
+                        val, typ, map[0], key
+                    ))
+        rv_dict[key] = val
+    return rv_dict
+
+
+def _convert_type(val, typ):
+    """ Helper function for :func:`map_xml_to_dict` to convert strings to correct type.
+    If the conversion cannot be made will raise a ValueError exception.
+
+    :param val: The string value to convert
+    :param typ: The type to convert the string into.
+    :return: Converted value
+    :raises: ValueError
+    """
+    if typ == 'int':
+        return int(val)
+    elif typ == 'float':
+        return float(val)
+    elif typ == 'date':
+        # Incredibly Ofgem has several places where there are newlines in dates!
+        if b'\n' in val:
+            val = val.split(b"\n")[0]
+        for fmt in ['%d/%m/%Y', '%Y-%m-%d', '%Y-%m-%dT%H:%M:00']:
+            try:
+                return datetime.strptime(val.decode(), fmt).date()
+            except ValueError:
+                pass
+        raise ValueError("Unable to parse date {}".format(val))
+    elif typ == 'str':
+        if val[0] == b"'" and val[-1] == b"'":
+            val = val[1:-1]
+
+    return val

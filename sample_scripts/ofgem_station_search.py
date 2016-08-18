@@ -18,13 +18,15 @@
 
 import argparse
 import csv
+
+from pywind.log import setup_logging
 from pywind.ofgem import StationSearch
 from pywind.ofgem.Station import Station
+from pywind.utils import commandline_parser
 
 
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Search ofgem database for matching stations')
+def main():
+    parser = commandline_parser('Search ofgem database for matching stations')
     parser.add_argument('--name', action='store', help='Station name to search for')
     parser.add_argument('--generator', action='store', help='Generator ID to search for')
     parser.add_argument('--scheme', action='store', default='REGO',
@@ -33,9 +35,11 @@ if __name__ == '__main__':
     parser.add_argument('--output', action='store', help='Filename to output data into (as CSV)')
 
     args = parser.parse_args()
+    setup_logging(args.debug, request_logging=args.request_debug)
 
     print("Connecting with Ofgem website and preparing the search...")
     osd = StationSearch()
+    osd.start()
 
     crit = "Searching for Ofgem Stations where:\n\tscheme is %s" % args.scheme
 
@@ -59,6 +63,7 @@ if __name__ == '__main__':
 
     print(crit)
     print("\nGetting results from Ofgem...\n")
+
     if osd.get_data():
         print("Query returned {} result{}".format(len(osd), '' if len(osd) == 0 else 's'))
 
@@ -79,3 +84,6 @@ if __name__ == '__main__':
 
     else:
         print("No stations were returned")
+
+
+main()

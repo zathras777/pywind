@@ -7,6 +7,7 @@ import logging
 import html5lib
 
 import re
+from pprint import pprint
 
 
 def element_attributes(elm):
@@ -63,32 +64,6 @@ def quote(toquote):
         elif ooo < 0xbf:
             quoted.append('%C2%{:02X}'.format(ooo))
     return ''.join(quoted)
-
-
-class DeltaComponent(object):
-    """
-    Class that will parse a content stream and extract the first "delta update" component
-    it finds.
-    """
-    def __init__(self, content):
-        self.consumed = 0
-
-        components = []
-        for n in range(len(content)):
-            if content[n] == '|':
-                components.append(content[self.consumed:n])
-                self.consumed = n + 1
-                if len(components) == 3:
-                    break
-        print(components)
-        self.value_length = int(components[0])
-        self.type, self.name_or_extra = components[1:3]
-        self.value = content[self.consumed:self.consumed + self.value_length]
-        print("value = {}".format(self.value))
-        self.consumed += self.value_length
-        if content[self.consumed] != '|':
-            print("Value did not end on a pipe???")
-        self.consumed += 1
 
 
 class FormData(object):
@@ -195,20 +170,31 @@ class FormData(object):
 
     def _set_value_by_name(self, name, value):
         element = self.elements[name]
-        if isinstance(value, int):
-            value = str(value)
 
         if element['tag'] == 'select':
             sel = None
-            for opt in element['options'].keys():
-                if element['options'][opt].lower() == value.lower():
-                    sel = opt
+            if isinstance(value, int):
+                if value not in element['options']:
+                    self.logger.info("Unable to set %s to %s [not in options]", name, value)
+                    pprint(element['options'])
+                    return False, False
+                sel = value
+            else:
+                for opt in element['options'].keys():
+                    if element['options'][opt].lower() == value.lower():
+                        sel = opt
+                        break
             if sel is None:
+                self.logger.info("Unable to find a matching option for %s", value)
                 return False, False
             if sel in element['selected']:
-                return False, False
+                return True, False
             element['selected'] = [sel]
             return True, self._postback_needed(name)
+        elif 'value' in element:
+            element['value'] = value
+            return True, self._postback_needed(name)
+
         return False, False
 
     def _postback_needed(self, name):

@@ -17,8 +17,10 @@
 
 from datetime import datetime
 from lxml import etree
+from pprint import pprint
 
 from pywind.ofgem.Base import set_attr_from_xml, to_string, as_csv
+from pywind.utils import map_xml_to_dict
 
 
 class Certificates(object):
@@ -31,38 +33,33 @@ class Certificates(object):
               'start_no', 'finish_no', 'factor', 'issue_dt',
               'status', 'status_dt', 'current_holder', 'reg_no']
 
+    XML_MAPPING = (
+            ('textbox4', 'generator_id'),
+            ('textbox13', 'name'),
+            ('textbox5', 'scheme'),
+            ('textbox19', 'capacity', 'float', 0),
+            ('textbox12', 'country'),
+            ('textbox15', 'technology'),
+            ('textbox31', 'generation_type'),
+            ('textbox18', 'period'),
+            ('textbox21', 'certs', 'int', 0),
+            ('textbox24', 'start_no'),
+            ('textbox27', 'finish_no'),
+            ('textbox37', 'factor', 'float', 0),
+            ('textbox30', 'issue_dt', 'date'),
+            ('textbox33', 'status'),
+            ('textbox36', 'status_dt', 'date'),
+            ('textbox39', 'current_holder'),
+            ('textbox45', 'reg_no')
+        )
+
     def __init__(self, node):
         """ Extract information from the supplied XML node.
             The factor figure is MWh per certificate.
         """
-        mapping = [
-            ['textbox4', 'generator_id'],
-            ['textbox13', 'name'],
-            ['textbox5', 'scheme'],
-            ['textbox19', 'capacity', 0],
-            ['textbox12', 'country'],
-            ['textbox15', 'technology'],
-            ['textbox31', 'output'],
-            ['textbox18', 'period'],
-            ['textbox21', 'certs', 0],
-            ['textbox24', 'start_no'],
-            ['textbox27', 'finish_no'],
-            ['textbox37', 'factor', 0],
-            ['textbox30', 'issue_dt'],
-            ['textbox33', 'status'],
-            ['textbox36', 'status_dt'],
-            ['textbox39', 'current_holder'],
-            ['textbox45', 'reg_no']
-        ]
-
-        for m in mapping:
-            set_attr_from_xml(self, node, m[0], m[1])
-
-        self.factor = float(self.factor)
-        self.certs = int(self.certs) or 0
-        self.capacity = float(self.capacity) or 0
-        self.issue_dt = datetime.strptime(self.issue_dt.decode(), '%Y-%m-%dT%H:%M:00').date()
-        self.status_dt = datetime.strptime(self.status_dt.decode(), '%Y-%m-%dT%H:%M:00').date()
+        attrs = map_xml_to_dict(node, self.XML_MAPPING)
+        for key in attrs:
+            setattr(self, key, attrs[key])
 
         if self.period.startswith(b"01"):
             dt = datetime.strptime(self.period[:10].decode(), '%d/%m/%Y')
@@ -160,6 +157,8 @@ class CertificateStation(object):
 
 
 class CertificatesList(object):
+    """ Parse a file or string for Certificate information as returned by the Ofgem webform.
+    """
     NSMAP = {'a': 'CertificatesExternalPublicDataWarehouse'}
 
     def __init__(self, filename=None, data=None):

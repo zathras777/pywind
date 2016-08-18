@@ -61,42 +61,63 @@ class CertificateSearch(object):
 
     def start(self):
         """ Retrieve the form from Ofgem website so we can start updating it.
+
+        :returns: True or False
+        :rtype: boolean
         """
         if self.form is not None:
-            self.form.get()
+            return self.form.get()
+        return True
 
-    def set_month(self, month):
-        """ Set month for certificates (start and finish)"""
-        if isinstance(month, int) or isinstance(month, long):
-            month = MONTHS[month - 1]
-        self.set_start_month(month)
-        self.set_finish_month(month)
+    def set_period(self, yearmonth):
+        """ Set the year and month for certificates.
 
-    def set_year(self, year):
-        """ Set year for certificates (start and finish) """
-        self.set_start_year(year)
-        self.set_finish_year(year)
-
-    def set_period(self, year, month):
-        """ Set the year and month for certificates. """
-        self.set_year(int(year))
-        self.set_month(int(month))
+        :param yearmonth: Numeric period in YYYYMM format
+        :returns: True or False
+        :rtype: boolean
+        """
+        if not isinstance(yearmonth, int):
+            yearmonth = int(yearmonth)
+        year = yearmonth / 100
+        if self._set_year(year) is False:
+            return False
+        return self._set_month(yearmonth % year)
 
     def set_start_month(self, month):
-        """ Set the start month for certificates """
-        self.form.set_value("output period \"month from\"", month)
+        """ Set the start month for certificates
+
+        :param month: Numeric month number
+        :returns: True or False
+        :rtype: boolean
+        """
+        return self.form.set_value("output period \"month from\"", MONTHS[month - 1])
 
     def set_finish_month(self, month):
-        """ Set the finish month for certificates """
-        self.form.set_value("output period \"month to\"", month)
+        """ Set the finish month for certificates
+
+        :param month: Numeric month number
+        :returns: True or False
+        :rtype: boolean
+        """
+        return self.form.set_value("output period \"month to\"", MONTHS[month - 1])
 
     def set_start_year(self, year):
-        """ Set the start year for certificates """
-        self.form.set_value("output period \"year from\"", year)
+        """ Set the start year for certificates
+
+        :param year: Numeric year to be set
+        :returns: True or False
+        :rtype: boolean
+        """
+        return self.form.set_value("output period \"year from\"", str(year))
 
     def set_finish_year(self, year):
-        """ Set the finish year for certificates """
-        self.form.set_value("output period \"year to\"", year)
+        """ Set the finish year for certificates
+
+        :param year: Numeric year to be set
+        :returns: True or False
+        :rtype: boolean
+        """
+        return self.form.set_value("output period \"year to\"", str(year))
 
     def filter_technology(self, what):
         """ Filter certificates by technology group """
@@ -107,19 +128,30 @@ class CertificateSearch(object):
         self.form.set_value('generation type', what)
 
     def filter_scheme(self, what):
-        """ Filter certificates by scheme """
-        self.form.set_value('scheme', what.upper())
+        """ Filter certificates by scheme
+
+        :param what: Scheme abbreviation [REGO, RO]
+        :returns: True or False
+        :rtype: boolean
+        """
+        return self.form.set_value('scheme', what.upper())
 
     def filter_generator_id(self, acc_no):
         """ Filter certificates by generator id (accreditation number) """
         self.form.set_value('accreditation no', acc_no.upper())
 
     def get_data(self):
-        """ Get data from the ofgem form """
+        """ Submit the form, get the results and parse them into :class:`Certificate` objects
+
+        :returns: True or False
+        :rtype: boolean
+        """
         if not self.form.submit():
             return False
         self.has_data = True
+        self.save_output('search.xml')
         self.cert_list = CertificatesList(data=self.form.raw_data)
+        return True
 
     def save_output(self, filename):
         if not self.has_data:
@@ -138,3 +170,28 @@ class CertificateSearch(object):
     def stations(self):
         """ Return a list of stations related to the certificates """
         return [] if self.cert_list is None else self.cert_list.stations()
+
+    # Internal functions
+
+    def _set_year(self, year):
+        """ Set both the start and finish year for certificates.
+
+        :param year: Numeric year to set
+        :returns: True or False
+        :rtype: boolean
+        """
+        if self.set_start_year(year) is False:
+            return False
+        return self.set_finish_year(year)
+
+    def _set_month(self, month):
+        """ Set both the start and finish months for certificates
+
+        :param month: Numeric month number
+        :returns: True or False
+        :rtype: boolean
+        """
+        if self.set_start_month(month) is False:
+            return False
+        return self.set_finish_month(month)
+
