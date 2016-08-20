@@ -93,7 +93,7 @@ class EROCPrices(object):
                                 'lowest_price': _convert_type(row_data[2].text.strip()[1:], 'float'),
                                 'total_volume': _convert_type(row_data[3].text or '0', 'int'),
                                 'co_fired_volume': _convert_type(row_data[4].text or '0', 'int'),
-                                'period': int("{}{:02d}".format(dtt.year, dtt.month))}
+                                'period': "{}{:02d}".format(dtt.year, dtt.month)}
                 self.auctions.append(auction_info)
         for info in self.auctions:
             if info['period'] in self.periods:

@@ -14,7 +14,7 @@ def roc_prices(args):
     print("  Period         Average Price ")
     print("  ------------   -------------")
     for price in roc.prices():
-        print("  {:<12d}  {:>11.2f}".format(price[0], price[1]))
+        print("  {:<12s}  {:>11.2f}".format(price[0], price[1]))
 
     return roc
 
