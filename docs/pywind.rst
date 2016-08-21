@@ -1,7 +1,7 @@
-pywind package
+pywind Package
 ==============
 
-The :mod:`pywind` package is split up into a series of modules, each of which deals with a different type of data.
+The :any:`pywind` is split up into a series of modules, each of which deals with a different type of data.
 
 Modules
 -------
