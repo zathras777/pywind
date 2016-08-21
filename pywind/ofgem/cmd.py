@@ -2,6 +2,7 @@ import sys
 
 from pywind.ofgem.CertificateSearch import CertificateSearch
 from pywind.ofgem.Certificates import CertificatesList
+from pywind.ofgem.StationSearch import StationSearch
 
 
 def ofgem_certificate_search(args):
@@ -28,8 +29,7 @@ def ofgem_certificate_search(args):
     if ocs.get_data() is False:
         print("Unable to get the data from Ofgem.")
         sys.exit(0)
-
-    print(ocs.form.raw_data)
+    return ocs
 
 
 def ofgem_certificates(args):
@@ -42,9 +42,24 @@ def ofgem_certificates(args):
     ocl = CertificatesList(filename=args.input)
     print("Certificates for {} stations found.".format(len(ocl)))
 
+    return ocl
+
 
 def ofgem_station_search(args):
     print("Ofgem Station Search\n")
+
+    oss = StationSearch()
+    if oss.start() is False:
+        print("Unable to get the form from the Ofgem website")
+        sys.exit(0)
+
+    if args.station is not None:
+        oss.filter_name(args.station)
+
+    print("get_data() => {}".format(oss.get_data()))
+
+    return oss
+
 
 
 

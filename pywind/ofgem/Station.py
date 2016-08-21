@@ -2,14 +2,10 @@
 #
 
 import sys
-from datetime import datetime
-from pywind.ofgem.Base import set_attr_from_xml
+from lxml import etree
+from pprint import pprint
 
-
-def fix_address(addr):
-    if sys.version_info < (3, 0):
-        return addr.replace("\r", ", ")
-    return addr.decode().replace("\r", ", ").encode('utf-8')
+from pywind.utils import map_xml_to_dict
 
 
 class Station(object):
@@ -26,14 +22,7 @@ class Station(object):
     formatted for display in a terminal.
 
     """
-
-    FIELDS = [
-        'generator_id', 'status', 'name', 'scheme',
-        'capacity', 'country', 'technology', 'output',
-        'accreditation_dt', 'commission_dt', 'developer',
-        'developer_address', 'address', 'fax'
-    ]
-    mapping = (
+    XML_MAPPING = (
         ('GeneratorID', 'generator_id'),
         ('StatusName', 'status'),
         ('GeneratorName', 'name'),
@@ -45,81 +34,25 @@ class Station(object):
         ('AccreditationDate', 'accreditation_dt', 'date'),
         ('CommissionDate', 'commission_dt', 'date'),
         ('textbox6', 'developer'),
-        ('textbox61', 'developer_address'),
-        ('textbox65', 'address'),
+        ('textbox61', 'developer_address', 'address'),
+        ('textbox65', 'address', 'address'),
         ('FaxNumber', 'fax')
     )
 
     def __init__(self, node):
-        for m in self.mapping:
-            if len(m) == 1:
-                set_attr_from_xml(self, node, m[0], m[0].lower())
-            else:
-                set_attr_from_xml(self, node, m[0], m[1])
-
-        # Now tidy up and ajust a few formats...
-        if self.capacity is not None:
-            self.capacity = float(self.capacity)
-        self._convert_date('commission_dt')
-        self._convert_date('accreditation_dt')
-        if self.address is not None:
-            self.address = fix_address(self.address)
-        if self.developer_address is not None:
-            self.developer_address = fix_address(self.developer_address)
+        self.attrs = map_xml_to_dict(node, self.XML_MAPPING)
+        pprint(self.attrs)
 
         # catch/correct some odd results I have observed...
-        if self.technology is not None and b'\n' in self.technology:
-            self.technology = self.technology.split(b'\n')[0]
+        if self.attrs['technology'] is not None and b'\n' in self.attrs['technology']:
+            self.attrs['technology'] = self.attrs['technology'].split(b'\n')[0]
 
-    def as_string(self):
-        """ Mainly used for command line tools... """
-        lines = []
-        for f in self.FIELDS:
-            lines.append("    {:>30s}: {}".format(f.capitalize().replace('_', ' '), self._string(f)))
-        return "\n".join(lines)
+    def __getattr__(self, item):
+        if item in self.attrs:
+            return self.attrs[item]
+        raise AttributeError(item)
 
-    @classmethod
-    def csv_title_row(cls):
-        titles = []
-        for m in cls.mapping:
-            _t = (m[0] if len(m) == 1 else m[1]).replace('_', ' ')
-            titles.append(" ".join([x.capitalize() for x in _t.split(' ')]))
-        return titles
-
-    def as_csvrow(self):
-        return [self._csv(f) for f in self.FIELDS]
-
-    ###
-    ### Private functions below
-    ###
-    def _convert_date(self, which):
-        dtstr = getattr(self, which)
-        if b'\n' in dtstr:
-            dtstr = dtstr.split(b"\n")[0]
-        setattr(self, which, datetime.strptime(dtstr.decode(), '%d/%m/%Y').date())
-
-    def _string(self, attr):
-        """ This is long winded, but allows for as_string() to work for both Python 2 & 3 """
-        val = getattr(self, attr)
-        if val is None:
-            return ''
-        if type(val) is str:
-            return val
-        elif type(val) is int:
-            return str(val)
-        elif type(val) is float:
-            return "{:.02f}".format(val)
-        elif hasattr(val, 'strftime'):
-            return val.strftime("%Y-%m-%d")
-        return val.decode()
-
-    def _csv(self, f):
-        """ Return the given field as a value suitable for inclusion in a CSV file for Python 2 or 3 """
-        val = getattr(self, f)
-        if sys.version_info >= (3, 0) and type(val) is bytes:
-            return val.decode()
-        return val
-
-    def _csv_title(self, m):
-        _t = m[0] if len(m) == 1 else m[1]
-        return _t.capitalize().replace('_', ' ')
+    def as_row(self):
+        """ Return the information in correct format for :func:`rows()` usage
+        """
+        return {'@{}'.format(key): self.attrs[key] for key in self.attrs.keys()}

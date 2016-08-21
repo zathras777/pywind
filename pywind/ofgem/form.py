@@ -8,6 +8,7 @@ from __future__ import print_function
 
 import logging
 import os
+from lxml import etree
 from pprint import pprint
 from urllib import unquote
 
@@ -87,6 +88,18 @@ class OfgemForm(object):
         export_url = _make_url(self.form_data.export_url) + 'XML'
         response = get_or_post_a_url(export_url, cookies=self.cookies)
         self.raw_data = response.content
+        return True
+
+    def save_original(self, filename):
+        """ Save the original, downloaded source into the filename provided.
+
+        :param filename: Filename to save the file to.
+        :returns: True or False
+        :rtype: boolean
+        """
+        if self.raw_data is None:
+            return False
+        etree.write(filename, self.raw_data, encoding='utf-8')
         return True
 
     def set_value(self, lbl, value):

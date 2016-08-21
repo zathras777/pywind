@@ -10,6 +10,14 @@
     :undoc-members:
     :show-inheritance:
 
+:mod:`pywind.export`
+--------------------
+
+.. automodule:: pywind.export
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 :mod:`pywind.log`
 -----------------
 

@@ -51,6 +51,56 @@ certificates_xml = """
                 textbox36="2016-02-01T00:00:00"
                 textbox39="H G Gladwell &amp; Sons Ltd"
                 textbox45="655853"/>
+        <Detail textbox4="G00860LGSC"
+                textbox13="Patersons Quarries Generating Station &#8211; A"
+                textbox19="4252.00"
+                textbox5="REGO"
+                textbox12="Scotland"
+                textbox15="Landfill Gas"
+                textbox31="N/A"
+                textbox18="Jan-2016"
+                textbox21="2536"
+                textbox24="G00860LGSC0000000000010116310116GEN"
+                textbox27="G00860LGSC0000002535010116310116GEN"
+                textbox37="1.000000000000"
+                textbox30="2016-03-10T00:00:00"
+                textbox33="Issued"
+                textbox36="2016-03-10T00:00:00"
+                textbox39="Patersons of Greenoakhill"/>
+        <Detail textbox4="G00479NWNI"
+                textbox13="Derrymacanna KN199"
+                textbox19="225.00"
+                textbox5="REGO"
+                textbox12="Northern Ireland"
+                textbox15="Wind"
+                textbox31="N/A"
+                textbox18="Jan-2016"
+                textbox21="44"
+                textbox24="G00479NWNI0000000000010116310116GEN"
+                textbox27="G00479NWNI0000000043010116310116GEN"
+                textbox37="1.000000000000"
+                textbox30="2016-03-07T00:00:00"
+                textbox33="Issued"
+                textbox36="2016-03-07T00:00:00"
+                textbox39="NTR Bann Energy Ltd"
+                textbox45="NI606741"/>
+        <Detail textbox4="P00180NQNI"
+                textbox13="Derrymacanna"
+                textbox19="225.00"
+                textbox5="RO"
+                textbox12="Northern Ireland"
+                textbox15="On-shore Wind"
+                textbox31="N/A"
+                textbox18="Jan-2016"
+                textbox21="177"
+                textbox24="P00180NQNI0000000116NWE"
+                textbox27="P00180NQNI0001760116NWE"
+                textbox37="0.250000000000"
+                textbox30="2016-04-08T00:00:00"
+                textbox33="Issued"
+                textbox36="2016-08-05T00:00:00"
+                textbox39="Power NI Energy Ltd"
+                textbox45=""/>
     </Detail_Collection>
   </table1>
 </Report>
@@ -72,5 +122,7 @@ class UtilTest(unittest.TestCase):
             self.assertEqual(len(rv_dict), 17)
             self.assertIsInstance(rv_dict['factor'], float)
             self.assertIsInstance(rv_dict['issue_dt'], datetime.date)
-
-
+            self.assertTrue('name' in rv_dict)
+            self.assertNotEqual(len(rv_dict['name']), 0)
+            self.assertGreater(rv_dict['capacity'], 0)
+            self.assertGreater(len(rv_dict['scheme']), 0)

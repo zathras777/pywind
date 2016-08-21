@@ -2,29 +2,14 @@
 """
 Utility functions used by more than one module within pywind.
 """
-#
-# Copyright 2013-2016 david reid <zathrasorama@gmail.com>
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
 
 # pylint: disable=E1101
 
 import argparse
 from datetime import datetime
 from lxml import etree
-
 import requests
+import sys
 
 
 def get_or_post_a_url(url, post=False, **kwargs):
@@ -36,8 +21,8 @@ def get_or_post_a_url(url, post=False, **kwargs):
     :param post: True if the request should be a POST. Default is False which results in a GET request.
     :param kwargs: Optional keyword arguments that are passed directly to the requests call.
     :returns: The requests object is returned if all checks pass.
-    :rtype: Request
-    :raises: Raises :class:`Exception` for various errors.
+    :rtype: :class:`requests.Response`
+    :raises: Raises :exc:`Exception` for various errors.
 
     .. :note:: Normally the returned URL is compared with the URL requested. In cases \
     where this may change using the :param:ignore_url_check=True parameter will avoid this \
@@ -82,8 +67,9 @@ def valid_date(dtstr):
     """ Parse a string into a date using the YYYY-MM-DD format. Used by the :func:`commandline_parser` function.
 
     :param dtstr: Date string to be parsed
-    :returns: datetime.date object
-    :raises: :mod:`argparse.ArgumentTypeError` if the date string is not formatted as YYYY-MM-DD
+    :returns: Valid date
+    :rtype: :class:`datetime.date`
+    :raises: :exc:`argparse.ArgumentTypeError` if the date string is not formatted as YYYY-MM-DD
     """
     try:
         return datetime.strptime(dtstr, "%Y-%m-%d").date()
@@ -96,7 +82,8 @@ def commandline_parser(help_text):
     Simple function to create a command line parser with some generic options.
 
     :param help_text: The script description
-    :returns: An ArgumentParser object
+    :returns: Argument parser
+    :rtype: :class:`argparse.ArgumentParser`
     """
     parser = argparse.ArgumentParser(description=help_text)
     parser.add_argument('--debug', action='store_true', help='Enable debugging')
@@ -105,9 +92,12 @@ def commandline_parser(help_text):
     parser.add_argument('--date', type=valid_date, help='Date. (yyyy-mm-dd format)')
     parser.add_argument('--period', type=int, help='Period (format is YYYYMM)')
     parser.add_argument('--scheme', choices=['REGO', 'RO'], help='Ofgem Scheme')
+    parser.add_argument('--export', choices=['csv', 'xml', 'xlsx'], help='Data Export Format')
     parser.add_argument('--output', help='Export filename')
-    parser.add_argument('--format', choices=['csv', 'xml'], help='Data Export Format')
     parser.add_argument('--input', help='Filename to parse')
+    parser.add_argument('--save', action='store_true', help='Save downloaded file in original format')
+    parser.add_argument('--original', help='Filename for original format file (use with --save)')
+    parser.add_argument('--station', help='Station name to filter for (Ofgem only)')
     return parser
 
 
@@ -175,16 +165,11 @@ def map_xml_to_dict(xml_node, mapping):
         key = map[1] if len(map) > 1 and map[1] != '' else map[0].lower()
         if val is not None:
             val = val.strip().encode('utf-8')
-            if len(val) == 0 or val == 'N/A':
+            if len(val) == 0:
                 val = None if len(map) < 4 else map[3]
             else:
                 typ = map[2] if len(map) > 2 and map[2] != '' else 'str'
-                try:
-                    val = _convert_type(val, typ)
-                except ValueError:
-                    print("Unable to convert {} into a {} from XML attribute {} [{}]".format(
-                        val, typ, map[0], key
-                    ))
+                val = _convert_type(val, typ)
         rv_dict[key] = val
     return rv_dict
 
@@ -198,6 +183,8 @@ def _convert_type(val, typ):
     :return: Converted value
     :raises: ValueError
     """
+    if typ in ['int', 'float']:
+        val = val.replace(',', '')
     if typ == 'int':
         return int(val)
     elif typ == 'float':
@@ -212,8 +199,15 @@ def _convert_type(val, typ):
             except ValueError:
                 pass
         raise ValueError("Unable to parse date {}".format(val))
+    elif typ == 'bool':
+        if str(val).lower() in ['1', 'yes', 'y', 'true']:
+            return True
+        return False
+    elif typ == 'address':
+        if sys.version_info < (3, 0):
+            return val.replace('\r', ', ')
+        return val.decode().replace('\r', ', ').encode('utf-8')
     elif typ == 'str':
         if val[0] == b"'" and val[-1] == b"'":
             val = val[1:-1]
-
     return val

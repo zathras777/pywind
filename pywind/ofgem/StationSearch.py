@@ -1,21 +1,6 @@
 # coding=utf-8
 """ Module for performing a search of Ofgem Stations.
 """
-#
-# Copyright 2013-2015 david reid <zathrasorama@gmail.com>
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
 # pylint: disable=E1101
 
 import copy
@@ -26,7 +11,23 @@ from .Station import Station
 
 
 class StationSearch(object):
-    """ Class that allows easy searching of Ofgem stations and manages results. """
+    """ Performing a station search using the Ofgem website takes a while due to the 3.5M initial file and the
+     2M replies that are sent. Parsing these takes time, so patience is needed.
+
+     .. code::
+
+       >>> from pywind.ofgem.StationSearch import StationSearch
+       >>> oss = StationSearch()
+       >>> oss.start()
+       True
+       >>> oss.filter_name('griffin')
+       True
+       >>> oss.get_data()
+       True
+       >>> len(oss)
+       4
+
+    """
     START_URL = 'ReportViewer.aspx?ReportPath=/Renewables/Accreditation/' + \
                 'AccreditedStationsExternalPublic&ReportVisibility=1&ReportCategory=1'
 
@@ -67,7 +68,7 @@ class StationSearch(object):
                     _st.generator_id = _id
                     self.stations.append(_st)
             self.stations.append(stt)
-        return True
+        return len(self.stations) > 0
 
     def filter_technology(self, what):
         """ Filter stations based on technology. """
@@ -78,9 +79,32 @@ class StationSearch(object):
         return self.form.set_value("scheme", scheme.upper())
 
     def filter_name(self, name):
-        """ Filter stations based on name. """
+        """ Filter stations based on name. The search will return all stations containing the supplied name.
+
+        :param name: The name to filter for
+        :returns: True or False
+        :rtype: bool
+        """
         return self.form.set_value("generating station search", name)
 
     def filter_generator_id(self, accno):
         """ Filter stations based on generator id. """
         return self.form.set_value("accreditation search", accno)
+
+    def save_original(self, filename):
+        """ Save the downloaded station data into the filename provided.
+
+        :param filename: Filename to save the file to.
+        :returns: True or False
+        :rtype: boolean
+        """
+        return self.form.save_original(filename)
+
+    def rows(self):
+        """ Generator to return dicts of station information.
+
+         :returns: Dict of station information
+         :rtype: dict
+        """
+        for station in self.stations:
+            yield {'Station': station.as_row()}

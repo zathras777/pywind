@@ -2,21 +2,27 @@
 
 from __future__ import print_function
 
+import os
 import sys
 
 from pywind.bmreports.cmd import *  # pylint: disable=unused-import
 from pywind.ofgem.cmd import *      # pylint: disable=unused-import
+from pywind.roc.cmd import roc_prices
+from pywind.decc.cmd import decc_extract
 from pywind.log import setup_logging
 from pywind.utils import commandline_parser
+from pywind.export import export_to_file
 
 
 COMMANDS = {
     'bm_generation_type': 'BM Report by Generation Type',
     'bm_system_prices': 'BM Report Electricity Prices',
     'bm_unitdata': 'BM Report Unit Data',
+    'decc_extract': 'DECC Monthly Planning Extract',
     'ofgem_certificates': 'Ofgem Certificate parser',
     'ofgem_certificate_search': 'Ofgem Certificate Search',
     'ofgem_station_search': 'Ofgem Station Search',
+    'roc_prices': 'eROC Auction Prices'
 }
 
 
@@ -40,7 +46,20 @@ def main():
                   filename=args.log_filename)
 
     cmd_fn = globals()[args.command]
-    cmd_fn(args)
+    obj = cmd_fn(args)
+
+    if args.save:
+        filename = args.original or args.command
+        if hasattr(obj, 'save_original'):
+            if obj.save_original(filename) is False:
+                print("Unable to save the downloadd data :-(")
+            else:
+                print("Downloaded data saved to {}".format(filename))
+        else:
+            print("Saving data is not supported for this command.")
+
+    if args.export is not None:
+        export_to_file(args, obj)
 
 
 if __name__ == '__main__':

@@ -1,20 +1,6 @@
 #! /usr/bin/env python
 # coding=utf-8
 #
-# Copyright 2013 david reid <zathrasorama@gmail.com>
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
 
 """ capacity_ro.py
 
@@ -67,7 +53,6 @@ from datetime import date
 from xlwt import Alignment, XFStyle, Workbook, Worksheet
 
 from pywind.ofgem import CertificateSearch, StationSearch
-from pywind.ofgem.utils import get_period
 
 PERIOD_START = 6
 stations = []
@@ -314,6 +299,6 @@ if __name__ == '__main__':
                 ws.write(row, col+2, pr['record'].factor)
         col += 5
 
- 
+
     print "\nComplete. Excel spreadsheet %s" % args.filename
     wb.save(args.filename)

@@ -50,10 +50,3 @@
     :undoc-members:
     :show-inheritance:
 
-:mod:`pywind.ofgem.utils`
--------------------------
-
-.. automodule:: pywind.ofgem.utils
-    :members:
-    :undoc-members:
-    :show-inheritance:

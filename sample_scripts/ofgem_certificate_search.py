@@ -34,7 +34,6 @@ import csv
 from datetime import datetime
 
 from pywind.log import setup_logging
-from pywind.ofgem.Base import to_string
 from pywind.ofgem.CertificateSearch import CertificateSearch
 from pywind.ofgem.Certificates import CertificateStation
 from pywind.utils import commandline_parser

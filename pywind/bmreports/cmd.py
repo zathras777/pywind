@@ -8,9 +8,9 @@ from pywind.utils import multi_level_get
 
 def bm_generation_type(args):
     print("BMReport Generation Type\n")
-    gd = GenerationData()
-    gd.get_data()
-    data = gd.as_dict()
+    gdd = GenerationData()
+    gdd.get_data()
+    data = gdd.as_dict()
 
     ROW_FMT = "  {:8s} {:40s} {:5s} {:>10s} {:>12s}"
     row_titles = ROW_FMT.format('Code', 'Generation Type', 'Intcr',
@@ -20,6 +20,9 @@ def bm_generation_type(args):
     for sect in data.keys():
         if 'start' in data[sect]:
             print("{} - started {}".format(sect.title(), data[sect]['start']))
+        if 'finish' in data[sect]:
+            print("{} - finished {}".format(" " * len(sect.title()), data[sect]['start']))
+
         else:
             print(sect.title())
 
@@ -29,9 +32,10 @@ def bm_generation_type(args):
                                  '  Y' if typ['interconnector'] else '  N',
                                  typ['value'], typ['percent']))
         print("\n")
+    return gdd
 
 
-def bm_systemprices(args):
+def bm_system_prices(args):
     print("BMReport System Price Data\n")
     if args.date is not None:
         spp = SystemPrices(dtt=args.date)
@@ -43,10 +47,12 @@ def bm_systemprices(args):
         sys.exit(0)
     print("Date: {}".format(spp.dtt))
     ROW_FMT = "  {:6s}  {:>10s}  {:>10s}"
-    print(ROW_FMT.format("Period", 'SBP', 'SSP') + "\n" + \
+    print(ROW_FMT.format("Period", 'SBP', 'SSP') + "\n" +
           ROW_FMT.format('-' * 6, '-' * 10, '-' * 10))
     for prc in spp.prices:
         print(ROW_FMT.format(str(prc['period']), prc['sbp'], prc['ssp']))
+
+    return spp
 
 
 def bm_unitdata(args):
@@ -69,4 +75,4 @@ def bm_unitdata(args):
                              multi_level_get(bmu, 'volume.offer_values.tagged.total.value', 'n/a'),
                              multi_level_get(bmu, 'cashflow.bid_values.total.value', 'n/a'),
                              multi_level_get(bmu, 'cashflow.offer_values.total.value', 'n/a')))
-
+    return udd

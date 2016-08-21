@@ -2,30 +2,14 @@
 """
 Unit data from BM Reports
 """
-#
-# Copyright 2013, 2014 david reid <zathrasorama@gmail.com>
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 import os
-import requests
 import xlrd
 
 from datetime import timedelta, date, datetime
 from tempfile import NamedTemporaryFile
 
-from pywind.ofgem.utils import get_url
-from pywind.utils import parse_response_as_xml
+from pywind.utils import parse_response_as_xml, get_or_post_a_url, _convert_type
 
 
 def _mkdate(book, sheet, row, col):
@@ -33,11 +17,6 @@ def _mkdate(book, sheet, row, col):
     if val == '':
         return None
     return datetime(*xlrd.xldate_as_tuple(val, book.datemode)).date()
-
-
-def _yesno(val):
-    """ Convert yes/no into True/False """
-    return val.lower() in ['yes', 'true']
 
 
 def _walk_nodes(elm):
@@ -106,16 +85,16 @@ class UnitData(object):
         self.data = []
 
         if self.historic:
-            req = get_url('http://www.bmreports.com/bsp/additional/soapfunctions.php?', base)
-            if req is None or req.code != 200:
-                return False
-            return self._process(req)
+            resp = get_or_post_a_url('http://www.bmreports.com/bsp/additional/soapfunctions.php?',
+                                     params=base)
+            return self._process(resp.content)
         return False
 
     def as_dict(self):
-        return {'date': self.date.strftime("%y-%m-%d"),
-                'period': self.period,
-                'data': self.data
+        return {
+            'date': self.date.strftime("%y-%m-%d"),
+            'period': self.period,
+            'data': self.data
         }
 
     def _process(self, req):
@@ -170,7 +149,7 @@ class UnitData(object):
                 'type': bmu.get('TYPE'),
                 'lead': bmu.get('LEAD_PARTY'),
                 'ngc': bmu.get('NGC_NAME'),
-                }
+            }
             bmud['cashflow'] = _walk_nodes(bmu.xpath('.//CASHFLOW')[0])
             bmud['volume'] = _walk_nodes(bmu.xpath('.//VOLUME')[0])
             self.data.append(bmud)
@@ -191,9 +170,7 @@ class BaseUnitClass(object):
 
     def get_list(self):
         self.units = []
-        req = requests.get(self.XLS_URL)
-        if req.status_code != 200:
-            return
+        req = get_or_post_a_url(self.XLS_URL)
         tmp_f = NamedTemporaryFile(delete=False)
         with open(tmp_f.name, 'w') as fhh:
             fhh.write(req.content)
@@ -254,7 +231,7 @@ class PowerPackUnits(BaseUnitClass):
             'name': sht.cell(rownum, 2).value,
             'reg_capacity': sht.cell(rownum, 3).value,
             'date_added': _mkdate(wbb, sht, rownum, 4),
-            'bmunit': _yesno(sht.cell(rownum, 5).value),
+            'bmunit': _convert_type(sht.cell(rownum, 5).value, 'bool'),
             'cap': sht.cell(rownum, 6).value
         }
         if row_data['ngc_id'] == '':

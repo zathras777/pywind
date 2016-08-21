@@ -29,17 +29,22 @@ MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 
 
 
 class CertificateSearch(object):
-    """ Class that queries ofgem for certificate data. If it succeeds then
-        the returned certificates are available in the .certificates member.
+    """ Getting information about certificates issued by Ofgem requires accessing their webform.
+    This class provides a simple way of doing that.
+    Class that queries ofgem for certificate data. If it succeeds then
 
-        The data can be restricted by using the following keywords when
-        creating the class instance
+    .. code::
 
-          period  - month & year to search
-          month   - just the month to search
-          year    - just the year to search
-
-        len(object) will return the number of certificates currently available.
+      >>> from pywind.ofgem.CertificateSearch import CertificateSearch
+      >>> ocs = CertificateSearch()
+      >>> ocs.start()
+      True
+      >>> ocs.set_period(201601)
+      True
+      >>> ocs.get_data()
+      True
+      >>> len(ocs)
+      4898
 
     """
 
@@ -148,24 +153,38 @@ class CertificateSearch(object):
         """
         if not self.form.submit():
             return False
-        self.has_data = True
-        self.save_output('search.xml')
         self.cert_list = CertificatesList(data=self.form.raw_data)
-        return True
+        self.has_data = len(self.cert_list) > 0
+        return self.has_data
 
-    def save_output(self, filename):
-        if not self.has_data:
-            return False
-        doc = etree.fromstring(self.form.raw_data)
-        with open(filename, "w") as fhh:
-            fhh.write("{}".format(etree.tostring(doc, pretty_print=True)))
-        print("returned XML saved to '{}'".format(filename))
-        return True
+    def save_original(self, filename):
+        """ Save the downloaded certificate data into the filename provided.
+
+        :param filename: Filename to save the file to.
+        :returns: True or False
+        :rtype: boolean
+        """
+        return self.form.save_original(filename)
+
+    def rows(self):
+        """ Generator function that returns a station each time it is called.
+
+        :returns: A function that returns a dict containing information on one station.
+        :rtype: generator
+        """
+        if self.cert_list is None:
+            yield None
+        yield self.cert_list.rows()
 
     def parse_filename(self, filename):
-        """ Parse a file of certificates. """
+        """Parse an Ofgem generated file of certificates. This parses downloaded Ofgem files.
+
+        :param filename: The filename to be parsed
+        :returns: True or False
+        :rtype: boolean
+        """
         self.cert_list = CertificatesList(filename=filename)
-        return True
+        return len(self.cert_list) > 0
 
     def stations(self):
         """ Return a list of stations related to the certificates """

@@ -12,8 +12,6 @@ which is (c) Chris Veness 2005-2012.
 
 import math
 
-from pywind.ofgem.utils import viewitems
-
 
 class LatLon(object):
     OSGB36 = 1

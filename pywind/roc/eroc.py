@@ -1,5 +1,3 @@
-""" eroc.py """
-
 from datetime import datetime
 import html5lib
 

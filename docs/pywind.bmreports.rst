@@ -1,6 +1,10 @@
 :mod:`pywind.bmreports`
 =======================
 
+.. image:: http://bmreports.com/bwx_elexon_logo_new.gif
+   :name: BMReports by Elexon
+   :target: http://bmreports.com/
+
 .. warning::
    The data provided by the BMReports website is owned by Elexon UK and permission needs
    to be sought before reproducing it. The following functions should only be used with

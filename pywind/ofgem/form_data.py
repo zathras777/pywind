@@ -83,8 +83,8 @@ class FormData(object):
             with open(stored_file, "r") as ofh:
                 self._parse(ofh.read())
         elif len(initial_data) > 0:
-#            with open("stored_file.xml", "w") as wfh:
-#                wfh.write(initial_data)
+            with open("stored_file.xml", "w") as wfh:
+                wfh.write(initial_data)
             self.logger.debug("%d bytes of initial data supplied for FormData", len(initial_data))
             self._parse(initial_data)
 
@@ -94,7 +94,12 @@ class FormData(object):
         self._add_element('__EVENTTARGET', value='')
 
     def update(self, content=""):
-        """ Given some content, update all data. """
+        """ Given some content, update the form.
+
+        :param content: The content to update the form from
+        :returns: True or False
+        :rtype: bool
+        """
         content = content.strip()
         if len(content) == 0:
             return False
@@ -122,6 +127,10 @@ class FormData(object):
         """
         Process the form elements and return in a dict suitable for using as POST data.
 
+        :param quoted: If set the returned data will be fully quoted.
+        :param submit: True only if this is a submission post.
+        :returns: Dict of data to be posted as name: value pairs
+        :rtype: dict
         """
         post_data = {}
         for name in sorted(self.elements.keys()):
@@ -129,6 +138,8 @@ class FormData(object):
                 continue
             element = self.elements[name]
             if submit is False and element.get('type', '') == 'submit':
+                continue
+            if 'cbNull' in name and element['checked'] is False:
                 continue
             post_data[name] = self._get_post_value(name, element)
         if quoted:
@@ -193,6 +204,12 @@ class FormData(object):
             return True, self._postback_needed(name)
         elif 'value' in element:
             element['value'] = value
+            if 'checkbox' in element and element['checkbox']:
+                ckbox = self.elements[name.replace('txtValue', 'cbNull')]
+                ckbox['checked'] = False
+                return True, self._postback_needed(ckbox['name']) or self._postback_needed(name)
+
+            pprint(element)
             return True, self._postback_needed(name)
 
         return False, False
@@ -225,6 +242,7 @@ class FormData(object):
         self.logger.debug("    : Method: %s", self.method)
 
         self._process_input(form_root)
+        self._process_cbnull()
         self._process_select(form_root)
         self._process_labels(form_root)
 
@@ -241,6 +259,12 @@ class FormData(object):
                     continue
             self._add_element(None, **inp_data)
             self.logger.debug("  - adding %s", inp_data['name'])
+
+    def _process_cbnull(self):
+        for key in self.elements.keys():
+            if key.endswith('cbNull'):
+                if key.replace('cbNull', 'txtValue') in self.elements:
+                    self.elements[key.replace('cbNull', 'txtValue')]['checkbox'] = True
 
     def _process_select(self, root):
         self.logger.debug("Processing SELECT elements...")
