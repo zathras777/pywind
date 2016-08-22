@@ -19,7 +19,7 @@ setup(
     author='David Reid',
     author_email='zathrasorama@gmail.com',
     url='https://github.com/zathras777/pywind',
-    packages=find_packages(exclude=['tests']),
+    packages=find_packages(exclude=['tests', 'sample_scripts']),
     install_requires=[
         'lxml', 'xlrd', 'html5lib', 'requests'
     ],
