@@ -32,7 +32,7 @@ Utility functions used by more than one module within pywind.
 # pylint: disable=E1101
 
 import argparse
-from datetime import datetime
+from datetime import datetime, date
 from lxml import etree
 import requests
 import sys
@@ -236,6 +236,12 @@ def _convert_type(val, typ):
         if sys.version_info < (3, 0):
             return val.replace('\r', ', ')
         return val.decode().replace('\r', ', ').encode('utf-8')
+    elif typ == 'period':
+        # Convert 201601 to 01-01-2016
+        yyr = val / 100
+        mon = val - yyr * 100
+        return date(yyr, mon, 1)
+
     elif typ == 'str':
         if val[0] == b"'" and val[-1] == b"'":
             val = val[1:-1]
@@ -255,6 +261,10 @@ class StdoutFormatter(object):
          -----  ------  ----------
        >>> sof.row("first", "row", "right")
          first  row          right
+
+    .. note::
+
+      The format detection doesn't allow all options :-( "10,d" is not yet supported.
 
     """
     def __init__(self, *args, **kwargs):

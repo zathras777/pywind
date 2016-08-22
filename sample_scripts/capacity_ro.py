@@ -1,22 +1,46 @@
 #! /usr/bin/env python
 # coding=utf-8
+
+# This is free and unencumbered software released into the public domain.
 #
+# Anyone is free to copy, modify, publish, use, compile, sell, or
+# distribute this software, either in source code form or as a compiled
+# binary, for any purpose, commercial or non-commercial, and by any
+# means.
+#
+# In jurisdictions that recognize copyright laws, the author or authors
+# of this software dedicate any and all copyright interest in the
+# software to the public domain. We make this dedication for the benefit
+# of the public at large and to the detriment of our heirs and
+# successors. We intend this dedication to be an overt act of
+# relinquishment in perpetuity of all present and future rights to this
+# software under copyright law.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+# OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+# ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+# OTHER DEALINGS IN THE SOFTWARE.
+#
+# For more information, please refer to <http://unlicense.org/>
 
-""" capacity_ro.py
+"""
+This script was written to satisfy the following request by a researcher
 
-    This script was written to satisfy the following request by a
-    researcher
+   For a given list of windfarms, get the capacity and RO certificates
+   issued for a given period (or periods), as an Excel spreadsheet
 
-       "for a given list of windfarms, capacity and RO certificates
-        for a given period, as an Excel spreadsheet"
+Ofgem were unable to limit their data to the criteria but did supply
+an Excel spreadsheet of all their data - which was too large to be
+opened on most computers!
 
-    Ofgem were unable to limit their data to the criteria but did supply
-    an Excel spreadsheet of all their data - which was too large to be
-    opened on most computers!
+To use this script to get the information for the station Braes of Doune
 
-    To use this script to get the information for the station Braes of Doune
+.. code::
 
-    $ ./convert_ro.py --start Jan-2010 --end Dec-2010
+    $ ./convert_ro.py 201601 201603
     Enter a station name (or blank to finish)Braes Of Doune
     Enter a station name (or blank to finish)
 
@@ -25,280 +49,209 @@
          Braes Of Doune
 
     Complete. Generating Excel spreadsheet certificates.xls
-    $
 
-    When entering station names, you can specify more than one on a line
-    by seperating them with commas, so rerun the above query for the stations
-    Braes of Doune and Boulfruich you could do this
+When entering station names, you can specify more than one on a line
+by seperating them with commas, so rerun the above query for the stations
+Braes of Doune and Boulfruich you could do this
+
+.. code::
 
     $ ./convert_ro.py --start Jan-2010 --end Dec-2010 --filename two_stations
-    Enter a station name (or blank to finish)Braes Of Doune, Boulfruich
-    Enter a station name (or blank to finish)
 
-    Total of 2 stations to process
+You can also provide a file with one station name per line, using the **--input** parameter.
 
-         Braes Of Doune
-         Boulfruich
+.. code::
 
-    Complete. Generating Excel spreadsheet two_stations.xls
-    $
+  $ cat station.list
+  Braes Of Doune
+  Boulfruich
+  $ ./convert.py --input station.list 201601 201603
 
-    Station names are looked up and the full name and accreditation number
-    for the RO scheme are listed in the output.
+An Ofgem search is conducted for each station name supplied and **all** matching stations are
+added to the list of stations to have their certificate information queried and recorded.
+
+The output is minimal but intended to keep you up to date with progress as searching for stations
+takes a while.
+
+.. code::
+
+  $ capacity_ro.py 201601 201603 --stations Griffin
+  Period covered will be Jan-2016 to Mar-2016. A total of 3 periods
+  Station names to be searched for:
+      - Griffin
+  Enter a station name (or blank to finish)
+
+  Searching for stations...
+      - Griffin
+          found
+  A total of 4 stations will be recorded
+
+  Getting certificate data (this is quicker)...
+      - Griffin Wind Farm
+          added to spreadsheet
+      - William Griffin 6.0kwp
+          nothing to add
+      - Griffin PV System
+          nothing to add
+      - Ronald Griffin Solar Hub
+          nothing to add
+
+  Data saved to certificates.xls
+
+.. note::
+
+  It would be nice to have better formatting for the output, but as this is just a sample script I haven't
+  spent any time adding them, e.g. the date format on the exported spreadsheet needs setting.
+
 """
+from __future__ import print_function
 
 import sys
-import argparse
 from datetime import date
-from xlwt import Alignment, XFStyle, Workbook, Worksheet
+
+from xlwt import Workbook
 
 from pywind.ofgem import CertificateSearch, StationSearch
-
-PERIOD_START = 6
-stations = []
-
-def add_station(s):
-    s = s.strip()
-    if len(s) == 0 or s in stations:
-        return
-    stations.append(s)
+from pywind.utils import _convert_type, commandline_parser
 
 
-class PeriodRecord(object):
-    def __init__(self):
-        self.factor = 0
-        self.certs = 0
-        self.capacity = 0
-
-    def add_certificates(self, cr):
-        self.certs += cr.certs
-        if self.factor == 0:
-            self.factor = cr.factor
-        if self.capacity == 0:
-            self.capacity = cr.capacity
-
-
-class StationRecords(object):
-    def __init__(self, station):
-        self.station = station
-        self.periods = {}
-
-    def add_certificates(self, cr):
-        if not cr.period in self.periods:
-            self.periods[cr.period] = PeriodRecord()
-        self.periods[cr.period].add_certificates(cr)
-
-    def period_records(self):
-        records = []
-        for p in sorted(self.periods.keys()):
-            records.append({'period': p, 'record': self.periods[p]})
-        return records
+def add_station_sheet(wbb, stations):
+    ws = wbb.add_sheet('Stations')
+    row = 0
+    col = 0
+    ws.write(row, 0, "Station Details")
+    row = 2
+    for tit in ['Name', 'Accreditation Number', 'Scheme', 'Technology', 'Capapcity']:
+        ws.write(row, col, tit)
+        col += 1
+    row += 1
+    for station in stations:
+        ws.write(row, 0, station.name)
+        ws.write(row, 1, station.generator_id)
+        ws.write(row, 2, station.scheme)
+        ws.write(row, 3, station.technology)
+        ws.write(row, 4, station.capacity)
+        row += 1
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Download bulk information from Ofgem to produce an Excel spreadsheet')
-    parser.add_argument('--start',
-                        action='store',
-                        required=True,
-                        help='Period to start from (MMM-YYYY)')
-    parser.add_argument('--end',
-                        action='store',
-                        required=True,
-                        help='Period to finish on (MMM-YYYY)')
-    parser.add_argument('--scheme',
-                        action='store',
-                        default='RO',
-                        help='Scheme to get certificates for')
+def add_certificate_sheet(wbb, station, cert_list):
+    ws = wbb.add_sheet(station.name)
+    row = 0
+    ws.write(row, 0, station.name)
+    row = 2
+    col = 0
+    for tit in ['Period', 'Issue Date', 'Scheme', 'No. of Certificates', 'Factor',
+                'Status', 'Start No', 'Finish No']:
+        ws.write(row, col, tit)
+        col += 1
+    row += 1
+    for cert in cert_list.certs:
+        ws.write(row, 0, cert.period)
+        ws.write(row, 1, cert.issue_dt)
+        ws.write(row, 2, cert.scheme)
+        ws.write(row, 3, cert.certificates)
+        ws.write(row, 4, cert.factor)
+        ws.write(row, 5, cert.status)
+        ws.write(row, 6, cert.start_no)
+        ws.write(row, 7, cert.finish_no)
+        row += 1
+
+
+def main():
+    parser = commandline_parser('Download bulk information from Ofgem to produce an Excel spreadsheet')
+    parser.add_argument('start', type=int, help='Period to start (YYYYMM)')
+    parser.add_argument('end',  type=int, help='Period to finish (YYYYMM)')
     parser.add_argument('--filename',
-                        action='store',
                         default='certificates.xls',
                         help='Filename to export to')
-    parser.add_argument('--stations',
-                        action='store',
-                        help='Filename of stations to search for')
+    parser.add_argument('--stations', nargs='*', help='Stations to search for')
     args = parser.parse_args()
+    print(args)
 
-    (start_year, start_month) = get_period(args.start)
-    (end_year, end_month) = get_period(args.end)
     if not args.filename.endswith('.xls'):
         args.filename += '.xls'
 
     periods = []
-    for yy in range(start_year, end_year + 1):
-        mm = start_month if start_year == yy else 1
-        mm2 = end_month if end_year == yy else 12
-        for m in range(mm, mm2+1):
-            periods.append(date(yy,m,1).strftime("%b-%Y"))
+    start_dt = _convert_type(args.start, 'period')
+    end_dt = _convert_type(args.end, 'period')
+    for yyy in range(start_dt.year, end_dt.year + 1):
+        mmm = start_dt.month if start_dt.year == yyy else 1
+        mm2 = end_dt.month if end_dt.year == yyy else 12
+        for mon in range(mmm, mm2+1):
+            periods.append(date(yyy, mon, 1))
+
+    print("Period covered will be {} to {}. A total of {} periods".
+          format(start_dt.strftime("%b-%Y"),
+                 end_dt.strftime("%b-%Y"),
+                 len(periods)))
 
     stations = []
-    if args.stations is not None:
-        with open(args.stations) as fh:
-            for l in fh.readlines():
-                s = l.strip()
-                if '#' in s:
-                    (s, junk) = s.split('#',1)
-                add_station(s)
-    else:
-        while (True):
-            station = raw_input("Enter a station name (or blank to finish)")
-            if station.strip() == '':
-                break
-            if ',' in station:
-                for s in station.strip().split(','):
-                    add_station(s)
-            else:
-                add_station(station)
+    station_names = args.stations or []
 
-    if len(stations) == 0:
-        print "No stations to process. Exiting..."
+    if args.input is not None:
+        with open(args.input) as fh:
+            for line in fh.readlines():
+                station = line.strip()
+                if '#' in station:
+                    (station, dummy_junk) = station.split('#', 1)
+                station_names.append(station)
+
+    if len(station_names) > 0:
+        print("Station names to be searched for:")
+        for stat in station_names:
+            print("    - {}".format(stat))
+
+    while True:
+        station = raw_input("Enter a station name (or blank to finish)")
+        if station.strip() == '':
+            break
+        if ',' in station:
+            for s in station.strip().split(','):
+                station_names.append(s)
+        else:
+            station_names.append(station)
+
+    if len(station_names) == 0:
+        print("No stations to process. Exiting...")
         sys.exit(0)
 
-    wb = Workbook()
-    ws = wb.add_sheet('Certificate Data', cell_overwrite_ok=True)
+    print("\nSearching for stations...")
+    for name in station_names:
+        print("    - {}".format(name))
+        sss = StationSearch()
+        sss.start()
+        if sss.filter_name(name) and sss.get_data():
+            stations.extend(sss.stations)
+            print("        found")
+        else:
+            print("        no stations found")
 
-    ws.write(PERIOD_START - 1,0,"Period")
-    for i in range(0, len(periods)):
-        ws.write(PERIOD_START + i, 0, periods[i])
+    print("A total of {} stations will be recorded".format(len(stations)))
 
-    al = Alignment()
-    al.horz = Alignment.HORZ_CENTER
-    al.vert = Alignment.VERT_CENTER
+    wbb = Workbook()
+    add_station_sheet(wbb, stations)
 
-    title_style = XFStyle()
-    title_style.alignment = al
+    print("\nGetting certificate data (this is quicker)...")
+    certificates = {}
+    for station in stations:
+        print("    - {}".format(station.name))
+        ocs = CertificateSearch()
+        ocs.start()
+        if ocs.filter_generator_id(station.generator_id) and \
+                ocs.set_start_month(start_dt.month) and \
+                ocs.set_start_year(start_dt.year) and \
+                ocs.set_finish_month(end_dt.month) and \
+                ocs.set_finish_year(end_dt.year) and \
+                ocs.get_data():
+            certificates[station.name] = ocs.cert_list
+            add_certificate_sheet(wbb, station, ocs.cert_list)
+            print("        added to spreadsheet")
+        else:
+            print("        nothing to add")
 
-    station_records = {}
-
-    print "\nTotal of %d stations to process\n" % len(stations)
-    for i in range(0, len(stations)):
-        s = stations[i]
-
-        col = 1 + 5 * i
-        print "    ", s
-
-        # add headers
-#        ws.write(PERIOD_START - 1, col, "Installed Capacity")
-#        ws.write(PERIOD_START - 1, col + 1, "RO Certificates")
-#        ws.write(PERIOD_START - 1, col + 2, "RO Factor")
-#        ws.write(PERIOD_START - 1, col + 3, "REGO Certificates")
-#        ws.write(PERIOD_START - 1, col + 4, "REGO Factor")
-
-#        capacity = {}
-
-        ss = StationSearch()
-        ss.filter_name(s)
-        if not ss.get_data():
-            print "Unable to get station data for %s" % s
-            continue
-        if len(ss) == 0:
-            print "No stations found matching %s" % s
-            continue
-        if len(ss) > 1:
-            print "More than one station matches!"
-            for st in ss.stations:
-                print "    ", st['name']
-            continue
+    wbb.save(args.filename)
+    print("\nData saved to {}".format(args.filename))
 
 
-        station = ss.stations[0]
-        records = StationRecords(station)
-        station_records[station.name] = records
-
-        # Write name
-#        ws.write_merge(PERIOD_START - 4,
-#                       PERIOD_START - 4,
-#                       col,
-#                       col + 4,
-#                       station.name,
-#                       title_style)
-        # add accreditation #
-#        if scheme == 'RO':
-#            ws.write_merge(PERIOD_START - 2,
-#                           PERIOD_START - 2,
-#                           col,
-#                           col + 4,
-#                           'RO: ' + station.accreditation + '  [' + station.commission_dt.strftime("%d %b %Y") + ']',
-#                           title_style)
-#        elif scheme == 'REGO':
-#            ws.write_merge(PERIOD_START - 3,
-#                           PERIOD_START - 3,
-#                           col,
-#                           col + 4,
-#                           'REGO: ' + station.accreditation + '  [' + station.commission_dt.strftime("%d %b %Y") + ']',
-#                           title_style)
-
-        cs = CertificateSearch()
-        cs.set_start_month(start_month)
-        cs.set_start_year(start_year)
-        cs.set_finish_month(end_month)
-        cs.set_finish_year(end_year)
-
-#        print dir(cs)
-#        print dir(cs.form)
-#        print cs.form.fields
-        cs.form.set_text_value('accreditation', station.accreditation)
-
-        if not cs.get_data():
-            print "Unable to get any certificate data :-("
-            continue
-#        print cs.certificates
-#        continue
-
-        data = {}
-        for c in cs.certificates:
-            print c.as_string()
-            if c.status in ['Revoked','Retired','Expired']:
-                continue
-            records.add_certificates(c)
-
-#            row = periods.index(c.period) + PERIOD_START
-#            if not capacity.has_key(c.period):
-#                ws.write(row, col, c.capacity)
-#                capacity[c.period] = True
-#                data[c.period] = data.get(c.period, 0) + c.certs
-
-#            ws.write(row, col + 1, c.factor)
-
-#        for p, val in data.iteritems():
-#            row = periods.index(p) + PERIOD_START
-#            ws.write(row, col, val)
-
-    col = 1
-
-    for station in station_records.keys():
-        records = station_records[station]
-
-        ws.write(PERIOD_START - 1, col, "Installed Capacity")
-        ws.write(PERIOD_START - 1, col + 1, "RO Certificates")
-        ws.write(PERIOD_START - 1, col + 2, "RO Factor")
-        ws.write(PERIOD_START - 1, col + 3, "REGO Certificates")
-        ws.write(PERIOD_START - 1, col + 4, "REGO Factor")
-
-        ws.write_merge(PERIOD_START - 4,
-                       PERIOD_START - 4,
-                       col,
-                       col + 4,
-                       records.station.name,
-                       title_style)
-
-        # add accreditation #
-        if 'RO' in args.scheme:
-            ws.write_merge(PERIOD_START - 2,
-                           PERIOD_START - 2,
-                           col,
-                           col + 4,
-                           'RO: ' + records.station.accreditation + '  [' + records.station.commission_dt.strftime("%d %b %Y") + ']',
-                           title_style)
-
-
-        for pr in records.period_records():
-            row = periods.index(pr['period']) + PERIOD_START
-            ws.write(row, col, pr['record'].capacity)
-            if 'RO' in args.scheme:
-                ws.write(row, col+1, pr['record'].certs)
-                ws.write(row, col+2, pr['record'].factor)
-        col += 5
-
-
-    print "\nComplete. Excel spreadsheet %s" % args.filename
-    wb.save(args.filename)
+if __name__ == '__main__':
+    main()

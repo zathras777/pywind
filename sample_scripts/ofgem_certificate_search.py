@@ -1,20 +1,51 @@
-#!/usr/bin/env python
+#! /usr/bin/env python
 # coding=utf-8
+
+# This is free and unencumbered software released into the public domain.
 #
-# Copyright 2013 david reid <zathrasorama@gmail.com>
+# Anyone is free to copy, modify, publish, use, compile, sell, or
+# distribute this software, either in source code form or as a compiled
+# binary, for any purpose, commercial or non-commercial, and by any
+# means.
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# In jurisdictions that recognize copyright laws, the author or authors
+# of this software dedicate any and all copyright interest in the
+# software to the public domain. We make this dedication for the benefit
+# of the public at large and to the detriment of our heirs and
+# successors. We intend this dedication to be an overt act of
+# relinquishment in perpetuity of all present and future rights to this
+# software under copyright law.
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+# OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+# ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+# OTHER DEALINGS IN THE SOFTWARE.
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
+# For more information, please refer to <http://unlicense.org/>
+
+
+"""
+One of the most common requests is to search the Ofgem database for certificate issuance.
+This script provides an example of using :mod:`pywind` to do this.
+
+.. code::
+
+  $ ofgem_certificate_search --period 201601 --generator R00160SQSC
+  Contacting Ofgem and preparing to search.
+
+  Filtering search:
+      - generator id  R00160SQSC
+      - period should be 201601
+
+  Total of 1 records returned
+    Issue Date  Period    Station Name                         Scheme  Status      Certificates
+    ----------  --------  -----------------------------------  ------  ----------  ------------
+    2016-04-08  Jan-2016  Griffin Wind Farm                    RO      Issued             37491
+
+"""
 
 # Aug 2016
 #
@@ -30,75 +61,65 @@
 
 from __future__ import print_function
 
-import csv
-from datetime import datetime
+import sys
 
 from pywind.log import setup_logging
-from pywind.ofgem.CertificateSearch import CertificateSearch
-from pywind.ofgem.Certificates import CertificateStation
-from pywind.utils import commandline_parser
+from pywind.ofgem import CertificateSearch
+from pywind.utils import commandline_parser, StdoutFormatter
 
 
 def main():
     parser = commandline_parser('Get ofgem certificates for a given month & year')
-
-    parser.add_argument('--month', type=int, default=1, action='store', help='Month (as a number)')
-    parser.add_argument('--year', type=int, default=datetime.today().year, action='store', help='Year')
     parser.add_argument('--generator', action='store', help='Generator ID to search for')
-    parser.add_argument('--scheme', action='store', help='Scheme to search (defaults to RO and REGO)')
-    parser.add_argument('--filename', action='store', help='Filename to parse')
-    parser.add_argument('--output', action='store', help='Filename to store output in (as CVS)')
-    parser.add_argument('--verbose', action='store_true', help='Show verbose output')
 
     args = parser.parse_args()
     setup_logging(args.debug, request_logging=args.request_debug)
-    if args.filename is None:
-        print("Contacting Ofgem and preparing to search.\n")
-        ocs = CertificateSearch()
-        ocs.start()
 
-        crits = ["Searching Ofgem Certificates: "]
+    print("Contacting Ofgem and preparing to search.\n")
+    ocs = CertificateSearch()
+    ocs.start()
+    print("Filtering search:")
 
-        if args.scheme:
-            ocs.filter_scheme(args.scheme)
-            crits.append('\n\tscheme %s' % args.scheme)
+    if args.station:
+        print("    - cannot filter results based on station name")
 
-        if args.generator:
-            ocs.filter_generator_id(args.generator.upper())
-            crits.append("\n\tgenerator id is '%s'" % args.generator.upper())
-
-        if args.month and args.year:
-            ocs.set_period(args.year, args.month)
-            crits.append('\n\tperiod should be {} {}'.format(args.month, args.year))
+    if args.scheme:
+        if ocs.filter_scheme(args.scheme):
+            print("    - scheme {}".format(args.scheme))
         else:
-            if args.month:
-                ocs.set_month(args.month)
-                crits.append('\n\tmonth %s' % args.month)
-            if args.year:
-                ocs.set_year(args.year)
-                crits.append('\n\tyear %s' % args.year)
+            print("\nFailed to filter for scheme.")
+            sys.exit(0)
 
-        print("Searching Ofgem for certificates matching:{}\n".format(", ".join(crits)))
-        ocs.get_data()
-    else:
-        ocs = CertificateSearch(filename=args.filename)
+    if args.generator:
+        if ocs.filter_generator_id(args.generator.upper()):
+            print("    - generator id  {}".format(args.generator.upper()))
+        else:
+            print("\nFailed to filter by generator")
+            sys.exit(0)
+
+    if args.period:
+        if ocs.set_period(args.period):
+            print('    - period should be {}'.format(args.period))
+        else:
+            print("\nFailed to set period")
+            sys.exit(0)
+
+    if ocs.get_data() is False:
+        print("No data was returned from the Ofgem server")
+        sys.exit(0)
 
     print("Total of %d records returned" % len(ocs))
 
-    if args.output is None:
-        for station in ocs.stations():
-            print("{:16s}: {}".format(to_string(station, 'generator_id'), to_string(station, 'name')))
-            for c in station.certs:
-                print(c.as_string() if args.verbose else str(c))
-            print("\n")
-
-    else:
-        with open(args.output, 'wt') as csvfile:
-            csv_writer = csv.writer(csvfile, quoting=csv.QUOTE_NONNUMERIC)
-            csv_writer.writerow(CertificateStation.csv_title_row())
-            for s in ocs.stations():
-                csv_writer.writerows(s.as_csvrow())
-        print("Output saved to file {} [CSV]".format(args.output))
+    fmt = StdoutFormatter("10s", "8s", "35s", "6s", "10s", "12d")
+    print(fmt.titles("Issue Date", "Period", "Station Name", "Scheme", "Status", "Certificates"))
+    for cert in ocs.certificates():
+        print(fmt.row(cert.issue_dt.strftime("%Y-%m-%d"),
+                      cert.period,
+                      cert.name,
+                      cert.scheme,
+                      cert.status,
+                      cert.certificates))
 
 
-main()
+if __name__ == '__main__':
+    main()

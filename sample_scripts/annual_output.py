@@ -1,29 +1,16 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-# Copyright 2013 david reid <zathrasorama@gmail.com>
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
+"""
+This sample script was written on behalf of Graham and an enquiry he
+had for a years worth of output data for Hydro & Biogas stations.
 
-# This sample script was written on behalf of Graham and an enquiry he
-# had for a years worth of output data for Hydro & Biogas stations.
-#
-# As usual REGO output will be used a proxy for output.
-#
-# The library appears unable to cope with setting the technology field
-# directly and so we restrict the options setting to the year, month and
-# scheme and then simply filter the returned data.
+As usual REGO output will be used a proxy for output.
+
+The library appears unable to cope with setting the technology field
+directly and so we restrict the options setting to the year, month and
+scheme and then simply filter the returned data.
+"""
 
 import argparse
 import sys
@@ -32,7 +19,8 @@ from datetime import date
 
 from pywind.ofgem import *
 
-if __name__ == '__main__':
+
+def main():
     parser = argparse.ArgumentParser(description='Extract monthly data for supplied year for Hydro or Biogas stations.')
     parser.add_argument('--year',
                         action='store',
@@ -79,3 +67,6 @@ if __name__ == '__main__':
                     added += 1
     print "Filtering complete. %d records saved as %s" % (added, fn)
 
+
+if __name__ == '__main__':
+    main()
