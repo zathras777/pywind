@@ -27,9 +27,8 @@
 
 import sys
 
-from pywind.ofgem.CertificateSearch import CertificateSearch
-from pywind.ofgem.Certificates import CertificatesList
-from pywind.ofgem.StationSearch import StationSearch
+from pywind.ofgem.search import CertificateSearch, StationSearch
+from pywind.ofgem.lists import CertificatesList
 
 
 def ofgem_certificate_search(args):

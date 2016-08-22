@@ -89,31 +89,29 @@ class UnitData(object):
         self.ngcunitname = kwargs.get('ngcunitname', '')
         self.historic = kwargs.get('historic', True)
         self.latest = kwargs.get('latest', False)
-
-        self.set_type(kwargs.get('type', 'Derived'))
-
-    def set_type(self, typ):
-        """ Will throw an error if an invalid type is used... """
-        self.type = self.TYPES[typ]
-
-    def as_params(self):
-        return {'param5': self.date.strftime("%Y-%m-%d"),
-                'param6': self.period,
-                'element': self.type,
-                'param1': self.unitid,
-                'param2': self.unittype,
-                'param3': self.leadparty,
-                'param4': self.ngcunitname,
-        }
+        self.type = self.TYPES[kwargs.get('type', 'Derived')]
 
     def get_data(self):
-        base = self.as_params()
+        """ Get the report data and update.
+
+        :returns: True or False
+        :rtype: bool
+        """
         self.data = []
+        params = {
+            'param5': self.date.strftime("%Y-%m-%d"),
+            'param6': self.period,
+            'element': self.type,
+            'param1': self.unitid,
+            'param2': self.unittype,
+            'param3': self.leadparty,
+            'param4': self.ngcunitname,
+        }
 
         if self.historic:
             resp = get_or_post_a_url('http://www.bmreports.com/bsp/additional/soapfunctions.php?',
-                                     params=base)
-            return self._process(resp.content)
+                                     params=params)
+            return self._process(resp)
         return False
 
     def as_dict(self):
@@ -195,6 +193,11 @@ class BaseUnitClass(object):
         return len(self.units)
 
     def get_list(self):
+        """ Download and update the unit list.
+
+        :returns: True
+        :rtype: bool
+        """
         self.units = []
         req = get_or_post_a_url(self.XLS_URL)
         tmp_f = NamedTemporaryFile(delete=False)
@@ -211,6 +214,16 @@ class BaseUnitClass(object):
             os.unlink(tmp_f.name)
         except Exception:
             pass
+        return True
+
+    def rows(self):
+        """ Generator to return row data.
+
+        :returns: Dict of unit data
+        :rtype: dict
+        """
+        for unit in self.units:
+            yield {'Unit': {'@{}'.format(key): unit[key] for key in unit.keys()}}
 
     def _extract_row_data(self, wbb, sht, rownum):
         raise NotImplementedError
@@ -258,7 +271,7 @@ class PowerPackUnits(BaseUnitClass):
             'reg_capacity': sht.cell(rownum, 3).value,
             'date_added': _mkdate(wbb, sht, rownum, 4),
             'bmunit': _convert_type(sht.cell(rownum, 5).value, 'bool'),
-            'cap': sht.cell(rownum, 6).value
+            'cap': _convert_type(sht.cell(rownum, 6).value, 'float')
         }
         if row_data['ngc_id'] == '':
             return

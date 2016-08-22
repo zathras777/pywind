@@ -26,12 +26,40 @@
 # For more information, please refer to <http://unlicense.org/>
 
 from datetime import datetime
-from lxml import etree
+from pprint import pprint
 
 from pywind.utils import map_xml_to_dict
 
 
-class Certificates(object):
+class OfgemObjectBase(object):
+    XML_MAPPING = None
+
+    def __init__(self, node):
+        """ Extract information from the supplied XML node.
+            The factor figure is MWh per certificate.
+        """
+        if self.XML_MAPPING is None:
+            raise NotImplementedError("Child classes should define their XML_MAPPING")
+
+        self.attrs = map_xml_to_dict(node, self.XML_MAPPING)
+#        pprint(self.attrs)
+
+    def __getattr__(self, item):
+        if item in self.attrs:
+            return self.attrs[item]
+        raise AttributeError(item)
+
+    def as_row(self):
+        """
+        Return the information in correct format for :func:`rows()` usage
+
+        :returns: Formatted attribute dict
+        :rtype: dict
+        """
+        return {'@{}'.format(key): self.attrs[key] for key in self.attrs.keys()}
+
+
+class Certificates(OfgemObjectBase):
     """ Certificate Number Fact Sheet
         https://www.ofgem.gov.uk/sites/default/files/docs/roc_identifier_fact_sheet_dec_2015.pdf
 
@@ -57,10 +85,7 @@ class Certificates(object):
         )
 
     def __init__(self, node):
-        """ Extract information from the supplied XML node.
-            The factor figure is MWh per certificate.
-        """
-        self.attrs = map_xml_to_dict(node, self.XML_MAPPING)
+        OfgemObjectBase.__init__(self, node)
 
         if self.attrs['period'].startswith(b"01"):
             dt = datetime.strptime(self.attrs['period'][:10].decode(), '%d/%m/%Y')
@@ -70,13 +95,13 @@ class Certificates(object):
         return "        {}  {}  {:5d}  {}".format(self.issue_dt.strftime("%Y %b %d"), self.start_no,
                                                   self.certs, self.current_holder)
 
-    def __getattr__(self, item):
-        if item in self.attrs:
-            return self.attrs[item]
-
     @property
     def digits(self):
         return 10 if self.scheme == 'REGO' else 6
+
+    @property
+    def certificates(self):
+        return self.finish - self.start + 1
 
     @property
     def start(self):
@@ -99,12 +124,6 @@ class Certificates(object):
         :rtype: integer
         """
         return int(self.finish_no[10:10 + self.digits])
-
-    def as_dict(self):
-        return self.attrs
-
-    def as_list(self):
-        return [getattr(self, f) for f in self.FIELDS]
 
     def output_summary(self):
         perc = (float(self['certs']) / self['capacity']) * 100
@@ -129,35 +148,44 @@ class Certificates(object):
         """
         return self.certs / self.factor
 
-    def append_xml_node(self, parent_node):
-        """ Create an XML node and append it to the parent node,
-        which is assumed to be a station node for this function.
 
-        .. :note::
+class Station(OfgemObjectBase):
+    """
+    Store details of a single station using data from Ofgem.
 
-        This is not Python 3 compatible :-(
+    The exposed object makes the individual pieces of data available by \
+    acting as a dict, i.e.
+    .. :code::
 
-        :param parent_node: XML parent node
-        :returns: None
-        """
-        node = etree.Element('CertificateRecord',
-                             issued=self.issue_dt.strftime("%Y-%m-%d"),
-                             status=self.status,
-                             country=self.country,
-                             scheme=self.scheme,
-                             start_no=self.start_no,
-                             finish_no=self.finish_no,
-                             no_certs=str(self.certs),
-                             factor=str(self.factor),
-                             output=str(self.output),
-                             status_dt=self.status_dt.strftime("%Y-%m-%d"),
-                             technology=self.technology,
-                             generation_type=self.generation_type or '')
-        parent_node.append(node)
+            name = station['name']
 
-    def as_row(self):
-        return {'CertificateRecord': {'@{}'.format(key): self.attrs[key] for
-                                      key in sorted(self.attrs.keys())}}
+    The convenience function :func:`as_string` will return a full list of the data \
+    formatted for display in a terminal.
+
+    """
+    XML_MAPPING = (
+        ('GeneratorID', 'generator_id'),
+        ('StatusName', 'status'),
+        ('GeneratorName', 'name'),
+        ('SchemeName', 'scheme'),
+        ('Capacity', '', 'float'),
+        ('Country',),
+        ('TechnologyName', 'technology'),
+        ('OutputType', 'output'),
+        ('AccreditationDate', 'accreditation_dt', 'date'),
+        ('CommissionDate', 'commission_dt', 'date'),
+        ('textbox6', 'developer'),
+        ('textbox61', 'developer_address', 'address'),
+        ('textbox65', 'address', 'address'),
+        ('FaxNumber', 'fax')
+    )
+
+    def __init__(self, node):
+        OfgemObjectBase.__init__(self, node)
+
+        # catch/correct some odd results I have observed...
+        if self.attrs['technology'] is not None and b'\n' in self.attrs['technology']:
+            self.attrs['technology'] = self.attrs['technology'].split(b'\n')[0]
 
 
 class CertificateStation(object):
@@ -187,52 +215,3 @@ class CertificateStation(object):
 
     def as_row(self):
         return [cert.as_row() for cert in self.certs]
-
-
-class CertificatesList(object):
-    """ Parse a file or string for Certificate information as returned by the Ofgem webform.
-    """
-    NSMAP = {'a': 'CertificatesExternalPublicDataWarehouse'}
-
-    def __init__(self, filename=None, data=None):
-        self.station_data = {}
-        if filename is None and data is None:
-            return
-
-        if filename is not None:
-            xml = etree.parse(filename)
-        elif data is not None:
-            xml = etree.fromstring(data)
-        else:
-            raise Exception("fiename or data MUST be provided.")
-
-        for node in xml.xpath('.//a:Detail', namespaces=self.NSMAP):
-            cert = Certificates(node)
-            station = CertificateStation(cert.name, cert.generator_id, cert.capacity, cert.scheme)
-            self.station_data.setdefault(cert.generator_id, station).add_cert(cert)
-
-    def __len__(self):
-        return len(self.station_data)
-
-    def as_xml(self):
-        """ Return the data as formatted XML.
-        :returns: String
-        """
-        # Create the root element
-        root = etree.Element('CertificateList')
-        # Make a new document tree
-        doc = etree.ElementTree(root)
-        for stat in sorted(self.station_data.keys()):
-            self.station_data[stat].append_xml_node(root)
-        return etree.tostring(doc, pretty_print=True, xml_declaration=True, encoding='utf-8')
-
-    def rows(self):
-        """ Generator that returns station dicts.
-
-        :returns: Dict of station data.
-        :rtype: dict
-        """
-        for s in sorted(self.station_data.keys()):
-            for info in self.station_data[s].as_row():
-                yield info
-

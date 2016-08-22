@@ -209,12 +209,15 @@ def _convert_type(val, typ):
     :return: Converted value
     :raises: ValueError
     """
-    if typ in ['int', 'float']:
+    if typ in ['int', 'float'] and isinstance(val, str):
         val = val.replace(',', '')
     if typ == 'int':
         return int(val)
     elif typ == 'float':
-        return float(val)
+        try:
+            return float(val)
+        except ValueError:
+            return 0.0
     elif typ == 'date':
         # Incredibly Ofgem has several places where there are newlines in dates!
         if b'\n' in val:
@@ -237,3 +240,75 @@ def _convert_type(val, typ):
         if val[0] == b"'" and val[-1] == b"'":
             val = val[1:-1]
     return val
+
+
+class StdoutFormatter(object):
+    """
+    Small class to provide easier printing to stdout.
+
+    .. code::
+
+       >>> from pywind.utils import StdoutFormatter
+       >>> sof = StdoutFormatter("5s", "6s", ">10s")
+       >>> sof.titles("Hello", "World", "right")
+         Hello  World        right
+         -----  ------  ----------
+       >>> sof.row("first", "row", "right")
+         first  row          right
+
+    """
+    def __init__(self, *args, **kwargs):
+        self.columns = []
+        for arg in args:
+            ssz = arg[:-1] if arg[0].isdigit() else arg[1:-1]
+            fmt = [arg[0] if not arg[0].isdigit() else '',
+                   int(ssz) if arg[-1] != 'f' else float(ssz),
+                   arg[-1],
+                   int(ssz) if arg[-1] != 'f' else int(ssz.split('.')[0])]
+            self.columns.append(fmt)
+        self.spaces = kwargs.get('spaces', "  ")
+
+    def formatter(self, titles=False):
+        """ Return the format string for the columns configured.
+
+        :param titles: True if the format will be used for titles (all strings)
+        :returns: Format string
+        :rtype: str
+        """
+        fmts = []
+        for col in self.columns:
+            ssz = col[1] if titles is False else col[3]
+            fmts.append("{{:{}{}{}}}".format(col[0], ssz, col[2] if titles is False else 's'))
+        return self.spaces + self.spaces.join(fmts)
+
+    def titles(self, *args):
+        """ Generate the title string block.
+
+        :param args: List of titles to use. Should be at least as long as the number of columns
+        :returns: Formatted title string
+        :rtype: str
+        """
+        if len(args) < len(self.columns):
+            raise AttributeError("Incorrect number of titles supplied. Should have {}, got {}".
+                                 format(len(self.columns), len(args)))
+        fmt = self.formatter(True)
+        return fmt.format(*args) + "\n" + \
+               fmt.format(*['-' * col[3] for col in self.columns])
+
+    def row(self, *args):
+        """ Use the column format to generate a string. This tries to truncate long strings.
+
+        :param args: The column values.
+        :returns: Formatted string using args
+        :rtype: str
+        """
+        vals = []
+        col = 0
+        for arg in args:
+            if self.columns[col][2] == 's' and len(arg) > self.columns[col][3]:
+                vals.append(arg[:self.columns[col][3] - 3] + '...')
+            else:
+                vals.append(arg)
+            col += 1
+
+        return self.formatter().format(*vals)

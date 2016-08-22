@@ -27,15 +27,12 @@
 
 # pylint: disable=E1101
 
-""" Module containing class to perform a search of Certificate records at Ofgem. """
-
-from __future__ import print_function
-
+import copy
 from lxml import etree
 
 from pywind.ofgem.form import OfgemForm
-from .Certificates import CertificatesList
-
+from pywind.ofgem.lists import CertificatesList
+from pywind.ofgem.objects import Station
 
 MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -132,36 +129,44 @@ class CertificateSearch(object):
 
         :param year: Numeric year to be set
         :returns: True or False
-        :rtype: boolean
+        :rtype: bool
         """
         return self.form.set_value("output period \"year to\"", str(year))
 
     def filter_technology(self, what):
         """ Filter certificates by technology group """
-        self.form.set_value('technology group', what)
+        return self.form.set_value('technology group', what)
 
     def filter_generation_type(self, what):
         """ Filter certificates by generation type """
-        self.form.set_value('generation type', what)
+        return self.form.set_value('generation type', what)
 
     def filter_scheme(self, what):
         """ Filter certificates by scheme
 
         :param what: Scheme abbreviation [REGO, RO]
         :returns: True or False
-        :rtype: boolean
+        :rtype: bool
         """
         return self.form.set_value('scheme', what.upper())
 
     def filter_generator_id(self, acc_no):
-        """ Filter certificates by generator id (accreditation number) """
-        self.form.set_value('accreditation no', acc_no.upper())
+        """ Filter certificates by generator id (accreditation number).
+        .. note::
+
+           Values supplied are upper cased automatically.
+
+        :param acc_no: Accreditation/Generation number
+        :returns: True or False
+        :rtype: bool
+        """
+        return self.form.set_value('accreditation no', acc_no.upper())
 
     def get_data(self):
         """ Submit the form, get the results and parse them into :class:`Certificate` objects
 
         :returns: True or False
-        :rtype: boolean
+        :rtype: bool
         """
         if not self.form.submit():
             return False
@@ -174,7 +179,7 @@ class CertificateSearch(object):
 
         :param filename: Filename to save the file to.
         :returns: True or False
-        :rtype: boolean
+        :rtype: bool
         """
         return self.form.save_original(filename)
 
@@ -184,16 +189,23 @@ class CertificateSearch(object):
         :returns: A function that returns a dict containing information on one station.
         :rtype: generator
         """
-        if self.cert_list is None:
-            yield None
-        yield self.cert_list.rows()
+        return self.cert_list.rows()
+
+    def certificates(self):
+        """ Generator that returns :class:`Certificates` objects.
+
+        :returns: Certificates objects
+        :rtype: Certificates
+        """
+        for cert in sorted(self.cert_list.certs, lambda x: x.start_no):
+            yield cert
 
     def parse_filename(self, filename):
         """Parse an Ofgem generated file of certificates. This parses downloaded Ofgem files.
 
         :param filename: The filename to be parsed
         :returns: True or False
-        :rtype: boolean
+        :rtype: bool
         """
         self.cert_list = CertificatesList(filename=filename)
         return len(self.cert_list) > 0
@@ -209,7 +221,7 @@ class CertificateSearch(object):
 
         :param year: Numeric year to set
         :returns: True or False
-        :rtype: boolean
+        :rtype: bool
         """
         if self.set_start_year(year) is False:
             return False
@@ -220,9 +232,118 @@ class CertificateSearch(object):
 
         :param month: Numeric month number
         :returns: True or False
-        :rtype: boolean
+        :rtype: bool
         """
         if self.set_start_month(month) is False:
             return False
         return self.set_finish_month(month)
 
+
+class StationSearch(object):
+    """ Performing a station search using the Ofgem website takes a while due to the 3.5M initial file and the
+     2M replies that are sent. Parsing these takes time, so patience is needed.
+
+     .. code::
+
+       >>> from pywind.ofgem.StationSearch import StationSearch
+       >>> oss = StationSearch()
+       >>> oss.start()
+       True
+       >>> oss.filter_name('griffin')
+       True
+       >>> oss.get_data()
+       True
+       >>> len(oss)
+       4
+
+    """
+    START_URL = 'ReportViewer.aspx?ReportPath=/Renewables/Accreditation/' + \
+                'AccreditedStationsExternalPublic&ReportVisibility=1&ReportCategory=1'
+
+    def __init__(self):
+        self.form = OfgemForm(self.START_URL)
+        self.stations = []
+
+    def __len__(self):
+        """ len(...) returns the number of stations available. """
+        return len(self.stations)
+
+    def __getitem__(self, item):
+        """ Get a station by name. """
+        if 0 >= item < len(self.stations):
+            return self.stations[item]
+
+    def start(self):
+        """ Retrieve the form from Ofgem website so we can start updating it.
+        """
+        if self.form is not None:
+            self.form.get()
+
+    def get_data(self):
+        """ Get data from form. """
+        if not self.form.submit():
+            return False
+
+        doc = etree.fromstring(self.form.raw_data)
+        # There are a few stations with multiple generator id's, separated by '\n' so
+        # capture them and add each as a separate entry.
+        for detail in doc.xpath("//*[local-name()='Detail']"):
+            stt = Station(detail)
+            if b'\n' in stt.generator_id:
+                ids = [x.strip() for x in stt.generator_id.split(b'\n')]
+                stt.generator_id = ids[0]
+                for _id in ids[1:]:
+                    _st = copy.copy(stt)
+                    _st.generator_id = _id
+                    self.stations.append(_st)
+            self.stations.append(stt)
+        return len(self.stations) > 0
+
+    def filter_technology(self, what):
+        """ Filter stations based on technology. """
+        return self.form.set_value("technology", what)
+
+    def filter_scheme(self, scheme):
+        """ Filter stations based on scheme they are members of. """
+        return self.form.set_value("scheme", scheme.upper())
+
+    def filter_name(self, name):
+        """ Filter stations based on name. The search will return all stations containing the supplied name.
+
+        :param name: The name to filter for
+        :returns: True or False
+        :rtype: bool
+        """
+        return self.form.set_value("generating station search", name)
+
+    def filter_generator_id(self, accno):
+        """ Filter stations based on generator id. """
+        return self.form.set_value("accreditation search", accno)
+
+    def filter_organisation(self, org_name):
+        """
+        Filter stations based on generator id.
+
+        :param org_name: Organisation name to filter
+        :returns: True or False
+        :rtype: bool
+        """
+        return self.form.set_value("organisation search", org_name)
+
+    def save_original(self, filename):
+        """ Save the downloaded station data into the filename provided.
+
+        :param filename: Filename to save the file to.
+        :returns: True or False
+        :rtype: boolean
+        """
+        return self.form.save_original(filename)
+
+    def rows(self):
+        """ Generator to return dicts of station information.
+
+         :returns: Dict of station information
+         :rtype: dict
+        """
+        for station in self.stations:
+            yield {'Station': station.as_row()}

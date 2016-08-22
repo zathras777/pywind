@@ -1,121 +1,27 @@
+import os
 import unittest
 from lxml import etree
 from pprint import pprint
 
 import datetime
 
-from pywind.ofgem.Certificates import Certificates
-from pywind.utils import map_xml_to_dict
-
-certificates_xml = """
-<Report xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xmlns="CertificatesExternalPublicDataWarehouse"
-        xsi:schemaLocation="CertificatesExternalPublicDataWarehouse https://colop-rodw-a01.corp.ofgem.gov.uk/ReportServer?%2FDatawarehouseReports%2FCertificatesExternalPublicDataWarehouse&amp;rs%3ACommand=Render&amp;rs%3AFormat=XML&amp;rs%3ASessionID=3ezqkv3jc0lqks55abnfuz55&amp;rc%3ASchema=True" Name="CertificatesExternalPublicDataWarehouse" textbox10="All Certificates by Accreditation (RO, REGO)"
-        lblDate="Period of Generation :"
-        textbox7="Jan 2016 - Jan 2016"
-        textbox8="Total certificates:"
-        textbox47="15994547">
-  <table1>
-    <Detail_Collection>
-        <Detail textbox4="G01337HYEN"
-                textbox13="Upwey Hydro Power"
-                textbox19="15.00"
-                textbox5="REGO"
-                textbox12="England"
-                textbox15="Hydro"
-                textbox31="N/A"
-                textbox18="Jan-2016"
-                textbox21="10"
-                textbox24="G01337HYEN0000000000010116310116GEN"
-                textbox27="G01337HYEN0000000009010116310116GEN"
-                textbox37="1.000000000000"
-                textbox30="2016-01-31T00:00:00"
-                textbox33="Issued"
-                textbox36="2016-01-31T00:00:00"
-                textbox39="Richard A Willett"
-                textbox45=""/>
-        <Detail textbox4="G04762PVEN"
-                textbox13="Copdock Mill PV"
-                textbox19="70.56"
-                textbox5="REGO"
-                textbox12="England"
-                textbox15="Photovoltaic "
-                textbox31="N/A"
-                textbox18="Jan-2016"
-                textbox21="1"
-                textbox24="G04762PVEN0000000000010116310116GEN"
-                textbox27="G04762PVEN0000000000010116310116GEN"
-                textbox37="1.000000000000"
-                textbox30="2016-02-01T00:00:00"
-                textbox33="Issued"
-                textbox36="2016-02-01T00:00:00"
-                textbox39="H G Gladwell &amp; Sons Ltd"
-                textbox45="655853"/>
-        <Detail textbox4="G00860LGSC"
-                textbox13="Patersons Quarries Generating Station &#8211; A"
-                textbox19="4252.00"
-                textbox5="REGO"
-                textbox12="Scotland"
-                textbox15="Landfill Gas"
-                textbox31="N/A"
-                textbox18="Jan-2016"
-                textbox21="2536"
-                textbox24="G00860LGSC0000000000010116310116GEN"
-                textbox27="G00860LGSC0000002535010116310116GEN"
-                textbox37="1.000000000000"
-                textbox30="2016-03-10T00:00:00"
-                textbox33="Issued"
-                textbox36="2016-03-10T00:00:00"
-                textbox39="Patersons of Greenoakhill"/>
-        <Detail textbox4="G00479NWNI"
-                textbox13="Derrymacanna KN199"
-                textbox19="225.00"
-                textbox5="REGO"
-                textbox12="Northern Ireland"
-                textbox15="Wind"
-                textbox31="N/A"
-                textbox18="Jan-2016"
-                textbox21="44"
-                textbox24="G00479NWNI0000000000010116310116GEN"
-                textbox27="G00479NWNI0000000043010116310116GEN"
-                textbox37="1.000000000000"
-                textbox30="2016-03-07T00:00:00"
-                textbox33="Issued"
-                textbox36="2016-03-07T00:00:00"
-                textbox39="NTR Bann Energy Ltd"
-                textbox45="NI606741"/>
-        <Detail textbox4="P00180NQNI"
-                textbox13="Derrymacanna"
-                textbox19="225.00"
-                textbox5="RO"
-                textbox12="Northern Ireland"
-                textbox15="On-shore Wind"
-                textbox31="N/A"
-                textbox18="Jan-2016"
-                textbox21="177"
-                textbox24="P00180NQNI0000000116NWE"
-                textbox27="P00180NQNI0001760116NWE"
-                textbox37="0.250000000000"
-                textbox30="2016-04-08T00:00:00"
-                textbox33="Issued"
-                textbox36="2016-08-05T00:00:00"
-                textbox39="Power NI Energy Ltd"
-                textbox45=""/>
-    </Detail_Collection>
-  </table1>
-</Report>
-"""
+from pywind.ofgem.objects import Certificates
+from pywind.utils import map_xml_to_dict, StdoutFormatter
 
 
 class UtilTest(unittest.TestCase):
     """
     ROC Tests
     """
+    HERE = os.path.dirname(__file__)
+
     def test_map_xml_to_dict(self):
         """ Test mapping from XML to dict using a mapping tuple.
         """
         NSMAP = {'a': 'CertificatesExternalPublicDataWarehouse'}
-        xml = etree.fromstring(certificates_xml)
+        with open(os.path.join(self.HERE, 'files', 'certificate_test.xml'), 'r') as xfh:
+            xml = etree.parse(xfh)
+#            fromstring(certificates_xml)
         for detail in xml.getroottree().xpath('.//a:Detail', namespaces=NSMAP):
             rv_dict = map_xml_to_dict(detail, Certificates.XML_MAPPING)
             self.assertIsInstance(rv_dict, dict)
@@ -126,3 +32,25 @@ class UtilTest(unittest.TestCase):
             self.assertNotEqual(len(rv_dict['name']), 0)
             self.assertGreater(rv_dict['capacity'], 0)
             self.assertGreater(len(rv_dict['scheme']), 0)
+
+    def test_stdout_formatter(self):
+        """ Test StdoutFormatter class
+        """
+        for case in [
+            (('5s', '5s'), ('abcde', 'abcde'), 2, "  abcde  abcde\n  -----  -----",
+             ('hello', 'world'), '  hello  world'),
+            (('5s', '5.1f'), ('abcde', 'abcde'), 2, "  abcde  abcde\n  -----  -----",
+             ('world', 1.1), '  world    1.1'),
+        ]:
+            fmt = StdoutFormatter(*case[0])
+            self.assertIsInstance(fmt, StdoutFormatter)
+            self.assertEqual(len(fmt.columns), case[2])
+            self.assertEqual(fmt.titles(*case[1]), case[3])
+            self.assertEqual(fmt.row(*case[4]), case[5])
+
+        fmt2 = StdoutFormatter("5.2f")
+        with self.assertRaises(ValueError):
+            fmt2.row("hello")
+            fmt2.row(123)
+            fmt2.row(None)
+        self.assertEqual(fmt2.row(123.45), "  123.45")

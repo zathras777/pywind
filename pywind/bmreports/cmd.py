@@ -27,11 +27,12 @@
 
 
 import sys
+from pprint import pprint
 
 from pywind.bmreports.generation_type import GenerationData
 from pywind.bmreports.prices import SystemPrices
-from pywind.bmreports.unit import UnitData
-from pywind.utils import multi_level_get
+from pywind.bmreports.unit import UnitData, UnitList, PowerPackUnits
+from pywind.utils import multi_level_get, StdoutFormatter
 
 
 def bm_generation_type(args):
@@ -74,11 +75,10 @@ def bm_system_prices(args):
         print("Failed to get data from remote server.")
         sys.exit(0)
     print("Date: {}".format(spp.dtt))
-    ROW_FMT = "  {:6s}  {:>10s}  {:>10s}"
-    print(ROW_FMT.format("Period", 'SBP', 'SSP') + "\n" +
-          ROW_FMT.format('-' * 6, '-' * 10, '-' * 10))
+    fmt = StdoutFormatter('6s', '>10s', '>10s')
+    print(fmt.titles("Period", 'SBP', 'SSP'))
     for prc in spp.prices:
-        print(ROW_FMT.format(str(prc['period']), prc['sbp'], prc['ssp']))
+        print(fmt.row(str(prc['period']), prc['sbp'], prc['ssp']))
 
     return spp
 
@@ -90,17 +90,73 @@ def bm_unitdata(args):
         print("Unable to get unit data.")
         sys.exit(0)
 
-    ROW_FMT = " {:7s}  {:30s} |{:>10s} {:>10s}|{:>10s} {:>10s}|{:>10s} {:>10s}|"
-    print("{:41s}|     Bid Volume      |     Offer Volume    |     Cashflow        |".format(' '))
-    print(ROW_FMT.format("NGC", 'Lead', 'Original', 'Tagged', 'Original', 'Tagged', 'Bid', 'Offer'))
-    print(ROW_FMT.format('-' * 7, '-' * 30, '-' * 10, '-' * 10,'-' * 10, '-' * 10, '-' * 10, '-' * 10))
-
+    fmt = StdoutFormatter('7s', '30s', '>10s', '>10s', '>10s', '>10s', '>10s', '>10s')
+    print("{:43s}     Bid Volume              Offer Volume           Cashflow".format(' '))
+    print(fmt.titles("NGC", 'Lead', 'Original', 'Tagged', 'Original', 'Tagged', 'Bid', 'Offer'))
     for bmu in udd.data:
-        print(ROW_FMT.format(bmu['ngc'], bmu['lead'],
-                             multi_level_get(bmu, 'volume.bid_values.original.total.value', 'n/a'),
-                             multi_level_get(bmu, 'volume.bid_values.tagged.total.value', 'n/a'),
-                             multi_level_get(bmu, 'volume.offer_values.original.total.value', 'n/a'),
-                             multi_level_get(bmu, 'volume.offer_values.tagged.total.value', 'n/a'),
-                             multi_level_get(bmu, 'cashflow.bid_values.total.value', 'n/a'),
-                             multi_level_get(bmu, 'cashflow.offer_values.total.value', 'n/a')))
+        print(fmt.row(bmu['ngc'], bmu['lead'],
+                      multi_level_get(bmu, 'volume.bid_values.original.total.value', 'n/a'),
+                      multi_level_get(bmu, 'volume.bid_values.tagged.total.value', 'n/a'),
+                      multi_level_get(bmu, 'volume.offer_values.original.total.value', 'n/a'),
+                      multi_level_get(bmu, 'volume.offer_values.tagged.total.value', 'n/a'),
+                      multi_level_get(bmu, 'cashflow.bid_values.total.value', 'n/a'),
+                      multi_level_get(bmu, 'cashflow.offer_values.total.value', 'n/a')))
     return udd
+
+
+def bm_unitlist(args):
+    print("BMReport Unit List\n")
+
+    ulist = UnitList()
+    if ulist.get_list() is False:
+        print("There was an error getting the list from the BMReports website")
+        sys.exit(0)
+
+    print("Total of {} units\n".format(len(ulist)))
+
+    fmt = StdoutFormatter('12s', '12s', '10s', '12s', '12s')
+    print(fmt.titles('NGC ID', 'Sett Id', 'Fuel Type',
+                     'Eff. From', 'Eff. To'))
+    for unit in ulist.units:
+        vals = [unit['ngc_id'],
+                unit.get('sett_id', ''),
+                unit['fuel_type'],
+                unit['eff_from'].strftime("%d %b %Y")]
+        if unit['eff_to'] is not None:
+            vals.append(unit['eff_to'].strftime("%d %b %Y"))
+        else:
+            vals.append('n/a')
+        print(fmt.row(*vals))
+
+    return ulist
+
+
+def power_pack_units(args):
+    print("National Grid Power Pack Units\n")
+
+    ppu = PowerPackUnits()
+    if ppu.get_list() is False:
+        print("Unable to get an updated list of power pack units")
+        sys.exit(0)
+
+    print("Total of {} units".format(len(ppu)))
+    fmt = StdoutFormatter('12s', '12s', '35s', '>10f', '12s', '8s', '>12f')
+    print(fmt.titles("NGC Id", "Sett ID", "Station Name", "Reg Cap", "Date Added", "BM Unit?", "Capacity"))
+
+    for unit in ppu.units:
+        vals = [
+            unit.get('ngc_id'),
+            unit.get('sett_id', 'n/a'),
+            unit.get('name'),
+            unit.get('reg_capacity', ''),
+            unit.get('date_added'),
+            "Yes" if unit.get('bmunit') else "No",
+            unit.get('cap', 0.0)
+        ]
+        if vals[4] is not None:
+            vals[4] = vals[4].strftime("%d %b %Y")
+        else:
+            vals[4] = 'Unknown'
+        print(fmt.row(*vals))
+
+    return ppu

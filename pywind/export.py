@@ -163,7 +163,6 @@ def _export_xlsx(obj, filename):
     sheets = {}
 
     for info in obj.rows():
-        print(info)
         for key in info.keys():
             if key not in sheets:
                 sheets[key] = [wbb.add_sheet(key), 0]

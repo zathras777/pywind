@@ -29,7 +29,6 @@
 
 from __future__ import print_function
 
-import os
 import sys
 
 from pywind.bmreports.cmd import *  # pylint: disable=unused-import
@@ -45,10 +44,12 @@ COMMANDS = {
     'bm_generation_type': 'BM Report by Generation Type',
     'bm_system_prices': 'BM Report Electricity Prices',
     'bm_unitdata': 'BM Report Unit Data',
+    'bm_unitlist': 'BM Report Unit List',
     'decc_extract': 'DECC Monthly Planning Extract',
     'ofgem_certificates': 'Ofgem Certificate parser',
     'ofgem_certificate_search': 'Ofgem Certificate Search',
     'ofgem_station_search': 'Ofgem Station Search',
+    'power_pack_units': 'National Grid Power Pack Units',
     'roc_prices': 'eROC Auction Prices'
 }
 

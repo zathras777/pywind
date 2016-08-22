@@ -38,7 +38,6 @@ import os
 from lxml import etree
 from urllib import unquote
 
-from pywind.log import setup_logging
 from pywind.ofgem.form_data import FormData
 from pywind.utils import get_or_post_a_url
 
@@ -107,7 +106,7 @@ class OfgemForm(object):
         if self.form_data.update(response.content) is False:
             self.logger.warning("Submit failed :-(")
             return False
-        print(self.form_data.export_url)
+
         if self.form_data.export_url is None:
             self.logger.warning("Unable to find the export url. Cannot continue.")
             return False
@@ -130,14 +129,10 @@ class OfgemForm(object):
 
     def set_value(self, lbl, value):
         is_set, cb_rqd = self.form_data.set_value_by_label(lbl, value)
-        self.logger.info("set_value_by_label [%s] -> %s, %s", lbl, is_set, cb_rqd)
+        self.logger.debug("set_value_by_label [%s] -> %s, %s", lbl, is_set, cb_rqd)
         if is_set and cb_rqd:
             return self.update()
         return is_set
-
-    def export_data(self, formt='XML'):
-        """ Try and get the export data in the requested format. """
-        pass
 
     def _do_post(self, submit=False):
         """ Submit the form data and update based on response.
@@ -164,30 +159,3 @@ class OfgemForm(object):
                                      headers=form_hdrs,
                                      data=post_data)
         return response
-
-
-def main():
-    START_URL = 'ReportViewer.aspx?ReportPath=/DatawarehouseReports/' + \
-                'CertificatesExternalPublicDataWarehouse&ReportVisibility=1&ReportCategory=2'
-
-    setup_logging(True)
-    off = OfgemForm(START_URL)
-    if off.get() is False:
-        print("Failed to get form")
-
-    print("setting year to...")
-    if off.set_value("Output Period \"Year To\"", "2016") is False:
-        print("Failed")
-        return
-    print("setting month from...")
-    if off.set_value("Output Period \"Month From\"", "Mar") is False:
-        print("Failed")
-        return
-    print("setting month to...")
-    if off.set_value("Output Period \"Month To\"", "Apr") is False:
-        print("Failed")
-        return
-    print("submit = {}".format(off.submit()))
-
-
-#main()

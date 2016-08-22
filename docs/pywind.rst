@@ -13,3 +13,4 @@ Modules
     pywind.decc
     pywind.ofgem
     pywind.roc
+    sample_scripts

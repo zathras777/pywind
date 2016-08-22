@@ -2,37 +2,30 @@
 ===================
 
 
-:mod:`pywind.ofgem.CertificateSearch`
+:mod:`pywind.ofgem.objects`
 -------------------------------------
 
-.. automodule:: pywind.ofgem.CertificateSearch
+.. automodule:: pywind.ofgem.objects
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`pywind.ofgem.Certificates`
+:mod:`pywind.ofgem.lists`
 --------------------------------
 
-.. automodule:: pywind.ofgem.Certificates
+.. automodule:: pywind.ofgem.lists
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`pywind.ofgem.Station`
+:mod:`pywind.ofgem.search`
 ---------------------------
 
-.. automodule:: pywind.ofgem.Station
+.. automodule:: pywind.ofgem.search
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`pywind.ofgem.StationSearch`
----------------------------------
-
-.. automodule:: pywind.ofgem.StationSearch
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 :mod:`pywind.ofgem.form`
 ------------------------

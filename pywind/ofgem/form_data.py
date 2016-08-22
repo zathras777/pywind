@@ -120,6 +120,8 @@ class FormData(object):
         self._add_element('__LASTFOCUS', value='')
         self._add_element('__EVENTTARGET', value='')
 
+#        pprint(self.labels)
+
     def update(self, content=""):
         """ Given some content, update the form.
 
@@ -236,7 +238,7 @@ class FormData(object):
                 ckbox['checked'] = False
                 return True, self._postback_needed(ckbox['name']) or self._postback_needed(name)
 
-            pprint(element)
+#            pprint(element)
             return True, self._postback_needed(name)
 
         return False, False
