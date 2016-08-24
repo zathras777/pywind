@@ -7,9 +7,9 @@ python:
   - "pypy"
 # command to install dependencies
 install:
-  - pip install .
+  - pip install -U pip wheel
   - pip install setuptools==24.0.3
-  - pip install -r requirements.txt
+  - pip install -r ourapp/requirements/requirements.txt
 # command to run tests
-script: 
+script:
   - pywind decc_extract
