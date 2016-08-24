@@ -21,8 +21,6 @@ Command                       Description
 ----------------------------  -------------------------------------------------------------------
 **decc_extract**              Obtain the latest DECC monthly planning extract.
 ----------------------------  -------------------------------------------------------------------
-**ofgem_certificates**        Parses a saved Ofgem Certificate report.
-----------------------------  -------------------------------------------------------------------
 **ofgem_certificate_search**  Performs a search of Ofgem Certificate records. The number of
                               criteria is limited compared with direct use of the module
                               :class:`CertificateSearch`.
@@ -110,6 +108,3 @@ To obtain the latest eROC auction data as an Excel spreadsheet,
     201607              41.65
   Output will be saved in erocprices.xlsx
   XLSX export to erocprices.xlsx completed
-
-
-
