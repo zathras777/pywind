@@ -75,10 +75,6 @@ ToDo List
 
  There are many improvements that the :mod:`pywind` package could benefit from, but these are the ones currently on my radar!
 
- - increase coverage of pywind :file:`cmdline` command line app prior to releasing a 1.0.0
- - standardise the way the modules are used and data is accessed
- - improve documentation
- - add travisCI integration
  - improve test coverage
  - add class to "accumulate" and "group" certificates to produce summary information
 

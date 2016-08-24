@@ -8,7 +8,12 @@ install:
   - pip install setuptools==24.0.3
   - pip install -r requirements.txt
   - python setup.py -q install
-# command to run tests
+# Run the tests and then some commands to at least give the modules
+# a workout.
 script:
   - python setup.py test
   - pywind decc_extract
+  - pywind ofgem_certificate_search --period 201601
+  - pywind bm_system_prices
+  - pywind roc_prices
+

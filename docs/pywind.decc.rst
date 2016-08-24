@@ -22,11 +22,4 @@
     :members:
     :undoc-members:
     :show-inheritance:
-
-:mod:`pywind.decc.points`
--------------------------
-
-.. automodule:: pywind.decc.points
-    :members:
-    :undoc-members:
-    :show-inheritance:
+    :special-members: __init__

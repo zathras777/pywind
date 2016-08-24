@@ -43,10 +43,9 @@ from pprint import pprint
 if sys.version_info >= (3, 0):
     import codecs
 import html5lib
+
 from pywind.utils import get_or_post_a_url, _convert_type
-
-
-#from .geo import osGridToLatLong, LatLon
+from .geo import Coord
 
 
 class DeccRecord(object):
@@ -90,7 +89,10 @@ class DeccRecord(object):
                     'turbine_capacity_(mw)',
                     'height_of_turbines_(m)'
                    )
-    INT_FIELDS = ('ref_id', 'no._of_turbines')
+    INT_FIELDS = ('ref_id',
+                  'no._of_turbines',
+                  'x-coordinate',
+                  'y-coordinate')
 
     def __init__(self, app_info):
         self.logger = logging.getLogger(__name__)
@@ -114,10 +116,9 @@ class DeccRecord(object):
                     val = val.decode('latin1').encode('utf-8')
             self.attrs[key] = val
 
-#        latlon = osGridToLatLong(int(self.x_coord), self.y_coord)
-#        latlon.convert(LatLon.WGS84)
-#        setattr(self, 'lat', latlon.lat)
-#        setattr(self, 'lon', latlon.lon)
+        if self.attrs.get('x-coordinate') is not None and self.attrs.get('y-coordinate') is not None:
+            coord = Coord(self.attrs['x-coordinate'], self.attrs['y-coordinate'])
+            self.attrs['lat'], self.attrs['lon'] = coord.as_wgs84()
 
     def __getattr__(self, item):
         if item in self.attrs:

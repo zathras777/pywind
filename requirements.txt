@@ -3,3 +3,4 @@ xlrd
 xlwt
 html5lib
 requests
+numpy
