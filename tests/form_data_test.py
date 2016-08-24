@@ -44,9 +44,6 @@ class FormDataTest(TestCase):
                      'ReportViewer$ctl04$ctl05$txtValue',
                      'ReportViewer$ctl04$ctl25$cbNull']:
             self.assertTrue(name in ofd.elements)
-            print(ofd.elements[name])
-
-        print(ofd.as_post_data(False))
 
         self.assertTrue('__ASYNCPOST' in ofd.elements)
         self.assertEqual(ofd.elements['__ASYNCPOST'], {'value': 'true'})
@@ -60,3 +57,9 @@ class FormDataTest(TestCase):
         ofd = FormData(content)
         self.assertIsInstance(ofd, FormData)
 
+        self.assertTrue('__ASYNCPOST' in ofd.elements)
+        self.assertEqual(ofd.elements['__ASYNCPOST'], {'value': 'true'})
+
+#    def test_03(self):
+#        """ Parse and test files/ofgem_station_search.html (this will take a while...) """
+#        fnn = os.path.join(self.HERE, 'files', 'ofgem_certificate_search.html')

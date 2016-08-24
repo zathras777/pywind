@@ -1,7 +1,6 @@
 import os
 import unittest
 from lxml import etree
-from pprint import pprint
 
 import datetime
 
@@ -21,8 +20,8 @@ class UtilTest(unittest.TestCase):
         NSMAP = {'a': 'CertificatesExternalPublicDataWarehouse'}
         with open(os.path.join(self.HERE, 'files', 'certificate_test.xml'), 'r') as xfh:
             xml = etree.parse(xfh)
-#            fromstring(certificates_xml)
-        for detail in xml.getroottree().xpath('.//a:Detail', namespaces=NSMAP):
+
+        for detail in xml.getroot().xpath('.//a:Detail', namespaces=NSMAP):
             rv_dict = map_xml_to_dict(detail, Certificates.XML_MAPPING)
             self.assertIsInstance(rv_dict, dict)
             self.assertEqual(len(rv_dict), 17)
