@@ -11,6 +11,10 @@ with io.open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 
+with io.open(path.join(here, 'requirements.txt')) as rfh:
+    requires = [line.strip() for line in rfh.readlines()]
+
+
 setup(
     name='pywind',
     version=__version__,
@@ -20,9 +24,7 @@ setup(
     author_email='zathrasorama@gmail.com',
     url='https://github.com/zathras777/pywind',
     packages=find_packages(exclude=['tests', 'sample_scripts']),
-    install_requires=[
-        'lxml', 'xlrd', 'html5lib', 'requests'
-    ],
+    install_requires=requires,
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',

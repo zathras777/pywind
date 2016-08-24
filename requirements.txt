@@ -1,4 +1,5 @@
 lxml
 xlrd
+xlwt
 html5lib
 requests
