@@ -24,6 +24,17 @@ Background
 
  My documentation skills are still weak, so there may well be errors in these documents - please let me know and I'll try to fix them!
 
+Travis CI
+=========
+
+In an effort to help find errors, I've enabled pywind for TravisCI. https://travis-ci.org/
+
+To view the latest results click on the badge below :-)
+
+.. image:: https://travis-ci.org/zathras777/pywind.svg?branch=master
+    :target: https://travis-ci.org/zathras777/pywind
+
+
 Python 3 Support
 ================
 

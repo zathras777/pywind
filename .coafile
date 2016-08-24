@@ -1,0 +1,11 @@
+[Default]
+
+
+
+bears = PyLintBear
+files = pywind/*.py
+
+[Spaces]
+bears = SpaceConsistencyBear
+files = pywind/*.py
+use_spaces = True
