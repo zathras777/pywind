@@ -31,20 +31,22 @@ Utility functions used by more than one module within pywind.
 
 # pylint: disable=E1101
 
+import sys
 import argparse
 from datetime import datetime, date
 from lxml import etree
 import requests
-import sys
 
 
 def get_or_post_a_url(url, post=False, **kwargs):
     """
-    Use the requests library to either get or post to a specified URL. The return code is checked
-    and exceptions raised if there has been a redirect or the status code is not 200.
+    Use the requests library to either get or post to a specified URL.
+    The return code is checked and exceptions raised if there has been
+    a redirect or the status code is not 200.
 
     :param url: The URL to be used.
-    :param post: True if the request should be a POST. Default is False which results in a GET request.
+    :param post: True if the request should be a POST. Default is False which results in a
+                 GET request.
     :param kwargs: Optional keyword arguments that are passed directly to the requests call.
     :returns: The requests object is returned if all checks pass.
     :rtype: :class:`requests.Response`
@@ -90,17 +92,19 @@ def get_or_post_a_url(url, post=False, **kwargs):
 
 
 def valid_date(dtstr):
-    """ Parse a string into a date using the YYYY-MM-DD format. Used by the :func:`commandline_parser` function.
+    """ Parse a string into a date using the YYYY-MM-DD format. Used by the
+    :func:`commandline_parser` function.
 
     :param dtstr: Date string to be parsed
     :returns: Valid date
     :rtype: :class:`datetime.date`
-    :raises: :exc:`argparse.ArgumentTypeError` if the date string is not formatted as YYYY-MM-DD
+    :raises: :exc:`argparse.ArgumentTypeError` if the date string is not formatted as
+             YYYY-MM-DD
     """
     try:
         return datetime.strptime(dtstr, "%Y-%m-%d").date()
     except ValueError:
-        raise argparse.ArgumentTypeError("Not a valid date: '{0}'.".format(s))
+        raise argparse.ArgumentTypeError("Not a valid date: '{0}'.".format(dtstr))
 
 
 def commandline_parser(help_text):
@@ -113,7 +117,8 @@ def commandline_parser(help_text):
     """
     parser = argparse.ArgumentParser(description=help_text)
     parser.add_argument('--debug', action='store_true', help='Enable debugging')
-    parser.add_argument('--request-debug', action='store_true', help='Enable debugging of requests')
+    parser.add_argument('--request-debug', action='store_true',
+                        help='Enable debugging of requests')
     parser.add_argument('--log-filename', action='store', help='Filename to write logging to')
     parser.add_argument('--date', type=valid_date, help='Date. (yyyy-mm-dd format)')
     parser.add_argument('--period', type=int, help='Period (format is YYYYMM)')
@@ -121,7 +126,8 @@ def commandline_parser(help_text):
     parser.add_argument('--export', choices=['csv', 'xml', 'xlsx'], help='Data Export Format')
     parser.add_argument('--output', help='Export filename')
     parser.add_argument('--input', help='Filename to parse')
-    parser.add_argument('--save', action='store_true', help='Save downloaded file in original format')
+    parser.add_argument('--save', action='store_true',
+                        help='Save downloaded file in original format')
     parser.add_argument('--original', help='Filename for original format file (use with --save)')
     parser.add_argument('--station', help='Station name to filter for (Ofgem only)')
     return parser
@@ -146,7 +152,8 @@ def parse_response_as_xml(request):
 
 def multi_level_get(the_dict, key, default=None):
     """
-    Given the level of nested data contained in some of the results, this function performs an iterative get.
+    Given the level of nested data contained in some of the results, this function
+    performs an iterative get.
 
     :param the_dict: The multi-level dict to get the key from.
     :param key: The key to look for, with each level separated by '.'
@@ -186,15 +193,15 @@ def map_xml_to_dict(xml_node, mapping):
     :rtype: dict
     """
     rv_dict = {}
-    for map in mapping:
-        val = xml_node.get(map[0], None)
-        key = map[1] if len(map) > 1 and map[1] != '' else map[0].lower()
+    for mapp in mapping:
+        val = xml_node.get(mapp[0], None)
+        key = mapp[1] if len(mapp) > 1 and mapp[1] != '' else mapp[0].lower()
         if val is not None:
             val = val.strip().encode('utf-8')
             if len(val) == 0:
-                val = None if len(map) < 4 else map[3]
+                val = None if len(mapp) < 4 else mapp[3]
             else:
-                typ = map[2] if len(map) > 2 and map[2] != '' else 'str'
+                typ = mapp[2] if len(mapp) > 2 and mapp[2] != '' else 'str'
                 val = _convert_type(val, typ)
         rv_dict[key] = val
     return rv_dict

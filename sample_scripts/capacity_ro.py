@@ -116,6 +116,10 @@ from pywind.utils import _convert_type, commandline_parser
 
 
 def add_station_sheet(wbb, stations):
+    """ Add a worksheet called Stations to the workbook with details of the stations
+    referenced. Certificate details for each station will appear in a seperate sheet
+    (one per station).
+    """
     ws = wbb.add_sheet('Stations')
     row = 0
     col = 0
@@ -134,7 +138,10 @@ def add_station_sheet(wbb, stations):
         row += 1
 
 
-def add_certificate_sheet(wbb, station, cert_list):
+def add_certificate_sheet(wbb, station, certs):
+    """ Add all certificates to a workbook in a sheet named for the
+    station being referenced.
+    """
     ws = wbb.add_sheet(station.name)
     row = 0
     ws.write(row, 0, station.name)
@@ -145,7 +152,7 @@ def add_certificate_sheet(wbb, station, cert_list):
         ws.write(row, col, tit)
         col += 1
     row += 1
-    for cert in cert_list.certs:
+    for cert in certs:
         ws.write(row, 0, cert.period)
         ws.write(row, 1, cert.issue_dt)
         ws.write(row, 2, cert.scheme)
@@ -158,6 +165,7 @@ def add_certificate_sheet(wbb, station, cert_list):
 
 
 def main():
+    """ Function that actually does the work :-) """
     parser = commandline_parser('Download bulk information from Ofgem to produce an Excel spreadsheet')
     parser.add_argument('start', type=int, help='Period to start (YYYYMM)')
     parser.add_argument('end',  type=int, help='Period to finish (YYYYMM)')
@@ -244,7 +252,7 @@ def main():
                 ocs.set_finish_year(end_dt.year) and \
                 ocs.get_data():
             certificates[station.name] = ocs.cert_list
-            add_certificate_sheet(wbb, station, ocs.cert_list)
+            add_certificate_sheet(wbb, station, ocs.certificates)
             print("        added to spreadsheet")
         else:
             print("        nothing to add")

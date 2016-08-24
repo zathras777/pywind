@@ -31,50 +31,62 @@ from __future__ import print_function
 
 import sys
 
-from pywind.bmreports.cmd import *  # pylint: disable=unused-import
-from pywind.ofgem.cmd import *      # pylint: disable=unused-import
-from pywind.roc.cmd import roc_prices
+from pywind.bmreports.cmd import bm_generation_type, bm_system_prices, \
+    bm_unitdata, bm_unitlist, power_pack_units
 from pywind.decc.cmd import decc_extract
 from pywind.log import setup_logging
+from pywind.ofgem.cmd import ofgem_certificate_search,\
+    ofgem_station_search
+from pywind.roc.cmd import roc_prices
 from pywind.utils import commandline_parser
 from pywind.export import export_to_file
 
 
-COMMANDS = {
-    'bm_generation_type': 'BM Report by Generation Type',
-    'bm_system_prices': 'BM Report Electricity Prices',
-    'bm_unitdata': 'BM Report Unit Data',
-    'bm_unitlist': 'BM Report Unit List',
-    'decc_extract': 'DECC Monthly Planning Extract',
-    'ofgem_certificates': 'Ofgem Certificate parser',
-    'ofgem_certificate_search': 'Ofgem Certificate Search',
-    'ofgem_station_search': 'Ofgem Station Search',
-    'power_pack_units': 'National Grid Power Pack Units',
-    'roc_prices': 'eROC Auction Prices'
-}
+COMMANDS = [
+    bm_generation_type,
+    bm_system_prices,
+    bm_unitdata,
+    bm_unitlist,
+    decc_extract,
+    ofgem_certificate_search,
+    ofgem_station_search,
+    power_pack_units,
+    roc_prices
+]
+COMMAND_NAMES = {}
+
+
+def build_command_names():
+    """ Use the list of commands available to build the COOMAND_NAMES dict.
+    """
+    for cmd in COMMANDS:
+        doc = cmd.__doc__.strip() if cmd.__doc__ is not None else 'Unknown'
+        doc = doc.split('\n')[0]
+        COMMAND_NAMES[cmd.__name__] = {'name': doc, 'function': cmd}
 
 
 def main():
     """ Main command line function.
     """
+    build_command_names()
     parser = commandline_parser("pywind command line app")
     parser.add_argument('command', nargs='?', help='Command to execute')
     args = parser.parse_args()
 
-    cmd = COMMANDS.get(args.command, None)
+    cmd = COMMAND_NAMES.get(args.command, None)
     if cmd is None:
         if args.command is not None:
             print("Invalid command specified: {}".format(args.command))
         print("Possible commands are:")
-        for key in sorted(COMMANDS.keys()):
-            print("  {:30s}  {}".format(key, COMMANDS[key]))
+        for key in sorted(COMMAND_NAMES):
+            print("  {:30s}  {}".format(key, COMMAND_NAMES[key]['name']))
         sys.exit(0)
 
     setup_logging(args.debug, request_logging=args.request_debug,
                   filename=args.log_filename)
 
-    cmd_fn = globals()[args.command]
-    obj = cmd_fn(args)
+    print("\n{}\n{}\n".format(cmd['name'], "=" * len(cmd['name'])))
+    obj = cmd['function'](args)
 
     if args.save:
         filename = args.original or args.command

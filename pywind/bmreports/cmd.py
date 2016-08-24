@@ -36,7 +36,8 @@ from pywind.utils import multi_level_get, StdoutFormatter
 
 
 def bm_generation_type(args):
-    print("BMReport Generation Type\n")
+    """ BMReport Generation Type """
+
     gdd = GenerationData()
     gdd.get_data()
     data = gdd.as_dict()
@@ -65,7 +66,7 @@ def bm_generation_type(args):
 
 
 def bm_system_prices(args):
-    print("BMReport System Price Data\n")
+    """ BMReport System Price Data """
     if args.date is not None:
         spp = SystemPrices(dtt=args.date)
     else:
@@ -84,7 +85,8 @@ def bm_system_prices(args):
 
 
 def bm_unitdata(args):
-    print("BMReport Unit Constraint Data\n")
+    """ BMReport Unit Constraint Data """
+
     udd = UnitData()
     if udd.get_data() is False:
         print("Unable to get unit data.")
@@ -105,7 +107,7 @@ def bm_unitdata(args):
 
 
 def bm_unitlist(args):
-    print("BMReport Unit List\n")
+    """ BMReport Unit List """
 
     ulist = UnitList()
     if ulist.get_list() is False:
@@ -132,7 +134,7 @@ def bm_unitlist(args):
 
 
 def power_pack_units(args):
-    print("National Grid Power Pack Units\n")
+    """ National Grid Power Pack Units """
 
     ppu = PowerPackUnits()
     if ppu.get_list() is False:

@@ -31,8 +31,7 @@ import copy
 from lxml import etree
 
 from pywind.ofgem.form import OfgemForm
-from pywind.ofgem.lists import CertificatesList
-from pywind.ofgem.objects import Station
+from pywind.ofgem.objects import Station, Certificates
 
 MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -41,6 +40,10 @@ class CertificateSearch(object):
     """ Getting information about certificates issued by Ofgem requires accessing their webform.
     This class provides a simple way of doing that.
     Class that queries ofgem for certificate data. If it succeeds then
+
+    There are 2 generator methods that allow iterating through the returned data,
+    - each call to :func:`stations()` will return a list of :class:`Certificates` objects related to a single station.
+    - each call to :func:`certificates()` will return a single :class:`Certificates` object.
 
     .. code::
 
@@ -60,10 +63,13 @@ class CertificateSearch(object):
     START_URL = 'ReportViewer.aspx?ReportPath=/DatawarehouseReports/' + \
                 'CertificatesExternalPublicDataWarehouse&ReportVisibility=1&ReportCategory=2'
 
+    NSMAP = {'a': 'CertificatesExternalPublicDataWarehouse'}
+
     def __init__(self, filename=None):
-        self.cert_list = None
         self.has_data = False
         self.form = None
+        self.certificate_records = []
+        self.station_records = {}
 
         if filename is not None:
             self.parse_filename(filename)
@@ -71,13 +77,13 @@ class CertificateSearch(object):
             self.form = OfgemForm(self.START_URL)
 
     def __len__(self):
-        return 0 if self.cert_list is None else len(self.cert_list)
+        return len(self.certificate_records)
 
     def start(self):
         """ Retrieve the form from Ofgem website so we can start updating it.
 
         :returns: True or False
-        :rtype: boolean
+        :rtype: bool
         """
         if self.form is not None:
             return self.form.get()
@@ -88,7 +94,7 @@ class CertificateSearch(object):
 
         :param yearmonth: Numeric period in YYYYMM format
         :returns: True or False
-        :rtype: boolean
+        :rtype: bool
         """
         if not isinstance(yearmonth, int):
             yearmonth = int(yearmonth)
@@ -101,8 +107,7 @@ class CertificateSearch(object):
         """ Set the start month for certificates
 
         :param month: Numeric month number
-        :returns: True or False
-        :rtype: boolean
+        :rtype: bool
         """
         return self.form.set_value("output period \"month from\"", MONTHS[month - 1])
 
@@ -110,8 +115,7 @@ class CertificateSearch(object):
         """ Set the finish month for certificates
 
         :param month: Numeric month number
-        :returns: True or False
-        :rtype: boolean
+        :rtype: bool
         """
         return self.form.set_value("output period \"month to\"", MONTHS[month - 1])
 
@@ -119,8 +123,7 @@ class CertificateSearch(object):
         """ Set the start year for certificates
 
         :param year: Numeric year to be set
-        :returns: True or False
-        :rtype: boolean
+        :rtype: bool
         """
         return self.form.set_value("output period \"year from\"", str(year))
 
@@ -128,7 +131,6 @@ class CertificateSearch(object):
         """ Set the finish year for certificates
 
         :param year: Numeric year to be set
-        :returns: True or False
         :rtype: bool
         """
         return self.form.set_value("output period \"year to\"", str(year))
@@ -145,19 +147,18 @@ class CertificateSearch(object):
         """ Filter certificates by scheme
 
         :param what: Scheme abbreviation [REGO, RO]
-        :returns: True or False
         :rtype: bool
         """
         return self.form.set_value('scheme', what.upper())
 
     def filter_generator_id(self, acc_no):
         """ Filter certificates by generator id (accreditation number).
+
         .. note::
 
            Values supplied are upper cased automatically.
 
         :param acc_no: Accreditation/Generation number
-        :returns: True or False
         :rtype: bool
         """
         return self.form.set_value('accreditation no', acc_no.upper())
@@ -165,31 +166,37 @@ class CertificateSearch(object):
     def get_data(self):
         """ Submit the form, get the results and parse them into :class:`Certificate` objects
 
-        :returns: True or False
         :rtype: bool
         """
         if not self.form.submit():
             return False
-        self.cert_list = CertificatesList(data=self.form.raw_data)
-        self.has_data = len(self.cert_list) > 0
+
+        xml = etree.fromstring(self.form.raw_data)
+        for node in xml.xpath('.//a:Detail', namespaces=self.NSMAP):
+            cert = Certificates(node)
+            self.certificate_records.append(cert)
+            self.station_records.setdefault(cert.name, []).append(cert)
+
+        self.has_data = len(self.certificate_records) > 0
         return self.has_data
 
     def save_original(self, filename):
         """ Save the downloaded certificate data into the filename provided.
 
         :param filename: Filename to save the file to.
-        :returns: True or False
         :rtype: bool
         """
         return self.form.save_original(filename)
 
+    # Generators to access data
     def rows(self):
         """ Generator function that returns a station each time it is called.
 
         :returns: A function that returns a dict containing information on one station.
         :rtype: generator
         """
-        return self.cert_list.rows()
+        for cert in self.certificate_records:
+            yield {'CertificateRecord': cert.as_row()}
 
     def certificates(self):
         """ Generator that returns :class:`Certificates` objects.
@@ -197,8 +204,13 @@ class CertificateSearch(object):
         :returns: Certificates objects
         :rtype: Certificates
         """
-        for cert in sorted(self.cert_list.certs, lambda x: x.start_no):
+        for cert in self.certificate_records:
             yield cert
+
+    def stations(self):
+        """ Generator that returns a Return a list of stations related to the certificates """
+        for stat in sorted(self.station_records):
+            yield self.station_records[stat]
 
     def parse_filename(self, filename):
         """Parse an Ofgem generated file of certificates. This parses downloaded Ofgem files.
@@ -207,12 +219,16 @@ class CertificateSearch(object):
         :returns: True or False
         :rtype: bool
         """
-        self.cert_list = CertificatesList(filename=filename)
-        return len(self.cert_list) > 0
+        with open(filename, 'r') as xfh:
+            data = xfh.read()
 
-    def stations(self):
-        """ Return a list of stations related to the certificates """
-        return [] if self.cert_list is None else self.cert_list.stations()
+        xml = etree.fromstring(data)
+        for node in xml.xpath('.//a:Detail', namespaces=self.NSMAP):
+            cert = Certificates(node)
+            self.certificate_records.append(cert)
+            self.station_records.setdefault(cert.name, []).append(cert)
+
+        return len(self.certificate_records) > 0
 
     # Internal functions
 
@@ -220,7 +236,6 @@ class CertificateSearch(object):
         """ Set both the start and finish year for certificates.
 
         :param year: Numeric year to set
-        :returns: True or False
         :rtype: bool
         """
         if self.set_start_year(year) is False:
@@ -280,7 +295,10 @@ class StationSearch(object):
             self.form.get()
 
     def get_data(self):
-        """ Get data from form. """
+        """ Get data from form.
+
+        :rtype: bool
+        """
         if not self.form.submit():
             return False
 
@@ -300,24 +318,32 @@ class StationSearch(object):
         return len(self.stations) > 0
 
     def filter_technology(self, what):
-        """ Filter stations based on technology. """
+        """ Filter stations based on technology.
+
+        :rtype: bool
+        """
         return self.form.set_value("technology", what)
 
     def filter_scheme(self, scheme):
-        """ Filter stations based on scheme they are members of. """
+        """ Filter stations based on scheme they are members of.
+
+        :rtype: bool
+        """
         return self.form.set_value("scheme", scheme.upper())
 
     def filter_name(self, name):
         """ Filter stations based on name. The search will return all stations containing the supplied name.
 
         :param name: The name to filter for
-        :returns: True or False
         :rtype: bool
         """
         return self.form.set_value("generating station search", name)
 
     def filter_generator_id(self, accno):
-        """ Filter stations based on generator id. """
+        """ Filter stations based on generator id.
+
+        :rtype: bool
+        """
         return self.form.set_value("accreditation search", accno)
 
     def filter_organisation(self, org_name):
@@ -325,7 +351,6 @@ class StationSearch(object):
         Filter stations based on generator id.
 
         :param org_name: Organisation name to filter
-        :returns: True or False
         :rtype: bool
         """
         return self.form.set_value("organisation search", org_name)
@@ -334,8 +359,7 @@ class StationSearch(object):
         """ Save the downloaded station data into the filename provided.
 
         :param filename: Filename to save the file to.
-        :returns: True or False
-        :rtype: boolean
+        :rtype: bool
         """
         return self.form.save_original(filename)
 

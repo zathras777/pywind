@@ -28,11 +28,10 @@
 import sys
 
 from pywind.ofgem.search import CertificateSearch, StationSearch
-from pywind.ofgem.lists import CertificatesList
 
 
 def ofgem_certificate_search(args):
-    print("Ofgem Certificate Search\n")
+    """ Ofgem Certificate Search """
 
     if args.period is None and args.scheme is None:
         print("You must supply at least a period or scheme.")
@@ -55,24 +54,14 @@ def ofgem_certificate_search(args):
     if ocs.get_data() is False:
         print("Unable to get the data from Ofgem.")
         sys.exit(0)
+
+    print("A total of {} certificate records have been extracted".format(len(ocs)))
+
     return ocs
 
 
-def ofgem_certificates(args):
-    print("Ofgem Certificate File Parser\n")
-
-    if args.input is None:
-        print("You must supply an input filename")
-        sys.exit(0)
-
-    ocl = CertificatesList(filename=args.input)
-    print("Certificates for {} stations found.".format(len(ocl)))
-
-    return ocl
-
-
 def ofgem_station_search(args):
-    print("Ofgem Station Search\n")
+    """ Ofgem Station Search """
 
     oss = StationSearch()
     if oss.start() is False:
@@ -82,7 +71,12 @@ def ofgem_station_search(args):
     if args.station is not None:
         oss.filter_name(args.station)
 
-    print("get_data() => {}".format(oss.get_data()))
+    if oss.get_data() is False:
+        print("Unable to get any records.")
+        sys.exit(0)
+
+    print("Total of {} station records returned.".format(len(oss)))
+    # todo - add output
 
     return oss
 

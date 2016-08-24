@@ -1,15 +1,6 @@
 :mod:`pywind`
 =============
 
-
-:mod:`pywind.command_line`
---------------------------
-
-.. automodule:: pywind.command_line
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 :mod:`pywind.export`
 --------------------
 

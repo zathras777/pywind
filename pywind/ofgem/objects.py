@@ -97,10 +97,18 @@ class Certificates(OfgemObjectBase):
 
     @property
     def digits(self):
+        """ Number of digits that store the certificate number.
+
+        :rtype: int
+        """
         return 10 if self.scheme == 'REGO' else 6
 
     @property
     def certificates(self):
+        """ Number of certificates covered by this object.
+
+        :rtype: int
+        """
         return self.finish - self.start + 1
 
     @property
@@ -110,7 +118,7 @@ class Certificates(OfgemObjectBase):
         so this function extracts the numeric part.
 
         :returns: Start number of the certificates referenced
-        :rtype: integer
+        :rtype: int
         """
         return int(self.start_no[10:10 + self.digits])
 
@@ -126,6 +134,10 @@ class Certificates(OfgemObjectBase):
         return int(self.finish_no[10:10 + self.digits])
 
     def output_summary(self):
+        """ Return a string with the output for the certificates.
+
+        :rtype: str
+        """
         perc = (float(self['certs']) / self['capacity']) * 100
         return "%s: %s   %s vs %s => %.02f%%" % (self.period, self.name, self.certs,
                                                  self.capacity, perc)
@@ -136,8 +148,14 @@ class Certificates(OfgemObjectBase):
         :returns: Dict with just information relevant to identifying the station
         :rtype: dict
         """
-        S_FIELDS = ['generator_id', 'name', 'scheme', 'capacity', 'country', 'technology', 'output']
-        return {fld: self.attrs[fld] for fld in S_FIELDS}
+        rv_dict = {fld: self.attrs[fld] for fld in ['generator_id',
+                                                    'name',
+                                                    'scheme',
+                                                    'capacity',
+                                                    'country',
+                                                    'technology']}
+        rv_dict['output'] = self.output
+        return rv_dict
 
     @property
     def output(self):

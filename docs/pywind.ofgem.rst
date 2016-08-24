@@ -10,14 +10,6 @@
     :undoc-members:
     :show-inheritance:
 
-:mod:`pywind.ofgem.lists`
---------------------------------
-
-.. automodule:: pywind.ofgem.lists
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 :mod:`pywind.ofgem.search`
 ---------------------------
 

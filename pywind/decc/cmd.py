@@ -31,10 +31,10 @@ from pywind.decc import MonthlyExtract
 
 
 def decc_extract(args):
-    """ Function to provide command line DECC functionality.
+    """ DECC Monthly Planning Extract
 
     :param args: The command line args
-    :returns: DECC :mod:`MonthlyExtract` object
+    :returns: DECC :class:`MonthlyExtract` object
     :rtype: MonthlyExtract
     """
     print("DECC Monthly Planning Extract\n")

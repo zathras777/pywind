@@ -28,20 +28,21 @@
 import sys
 
 from pywind.roc import EROCPrices
+from pywind.utils import StdoutFormatter
 
 
 def roc_prices(args):
-    print("eROC Auction Prices\n")
+    """ eROC Auction Prices """
 
     roc = EROCPrices()
     if not roc.get_prices():
         print("Unable to get prices from eROC website.")
         sys.exit(0)
 
-    print("  Period         Average Price ")
-    print("  ------------   -------------")
+    fmt = StdoutFormatter("<12s", "11.2f")
+    print(fmt.titles("Period", "Average Price"))
     for price in roc.prices():
-        print("  {:<12s}  {:>11.2f}".format(price[0], price[1]))
+        print(fmt.row(*price))
 
     return roc
 

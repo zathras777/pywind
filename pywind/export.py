@@ -25,14 +25,17 @@
 #
 # For more information, please refer to <http://unlicense.org/>
 
+# pylint: disable=E1101
+
+""" Export functions for command line app. """
+
 import csv
 import os
 import sys
 
 from datetime import date
-from lxml import etree
 from pprint import pprint
-
+from lxml import etree
 import xlwt
 
 
@@ -195,4 +198,3 @@ def _export_xlsx(obj, filename):
             sht[1] += 1
 
     wbb.save(filename)
-
