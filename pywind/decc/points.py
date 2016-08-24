@@ -36,6 +36,7 @@ which is (c) Chris Veness 2005-2012.
 """
 
 import math
+from pprint import pprint
 
 
 class InvalidScheme(Exception):
@@ -106,14 +107,22 @@ class Point(object):
                       's': -8.150 }
     }
 
-
     def __init__(self, scheme, *args):
-        stripped = [a.strip() for a in args]
+        if scheme not in self.SCHEMES:
+            raise ValueError("Invalid scheme provided for Point: Must be one of {}".
+                             format(", ".join(self.SCHEMES)))
+
+        stripped = []
+        for arg in args:
+            if isinstance(arg, (int, long, float)):
+                stripped.append(arg)
+            elif isinstance(arg, str):
+                stripped.append(int(arg.strip()))
         self.coords = {scheme: stripped}
 
     def converted_to(self, scheme):
         scheme = scheme.lower()
-        if not scheme in self.SCHEMES:
+        if scheme not in self.SCHEMES:
             raise InvalidScheme
         if scheme in self.coords:
             return self.coords[scheme]
@@ -171,12 +180,11 @@ class Point(object):
             print("  %s: %s" % (self.SCHEME_TEXT[k], self.pretty_string(k)))
 
     def __getitem__(self, value):
-        if not value.lower() in self.SCHEMES:
+        if value.lower() not in self.SCHEMES:
             raise KeyError
-        if self.converted_to(value.lower()):
-            return self.coords[value.lower()]
-
-        raise ConversionError
+        if self.converted_to(value.lower()) is False:
+            raise ConversionError("Unable to convert into {}".format(value))
+        return self.coords[value.lower()]
 
     # Conversion routines and functions only below this line.
 
@@ -233,7 +241,6 @@ class Point(object):
         if (l2 > 7):
             l2 += 1
 
-
         letters = chr(int(l1) + ord('A')) + chr(int(l2) + ord('A'))
         # strip 100km-grid indices from easting & northing, and reduce precision
         e = math.floor((input[0] % 100000)) # / math.pow(10, 5 - digits / 2))
@@ -242,7 +249,7 @@ class Point(object):
         return True
 
     def _osref_from_osgb36(self):
-        if not 'osgb36' in self.coords:
+        if 'osgb36' not in self.coords:
             return False
 
         input = [math.radians(self.coords['osgb36'][0]),
@@ -299,7 +306,7 @@ class Point(object):
         return True
 
     def _osgb36_from_osref(self):
-        if not 'osref' in self.coords:
+        if 'osref' not in self.coords:
             return False
 
         input = self.coords['osref']

@@ -38,7 +38,18 @@ which is (c) Chris Veness 2005-2012.
 import math
 
 
+def _parts(self, n):
+    n = math.fabs(n)
+    d = math.floor(n)
+    m0 = (n - d) * 60
+    m = math.floor(m0)
+    s = (m0 - m) * 60
+    return [d, m, s]
+
+
 class LatLon(object):
+    """ Class to store and allow easy conversion of lat/lon positions.
+    """
     OSGB36 = 1
     WGS84 = 2
 
@@ -79,11 +90,6 @@ class LatLon(object):
         self.lon = lon
         self.scheme = scheme
 
-    def _nearest(self, n):
-        if n % 1 >= 0.5:
-            return math.ceil(n)
-        return math.floor(n)
-
     def _parts(self, n):
         n = math.fabs(n)
         d = math.floor(n)
@@ -103,13 +109,19 @@ class LatLon(object):
                               EW, self._text(self.lon))
 
     def convert(self, scheme):
+        """ Convert the stored value to a different scheme.
+
+        :param scheme: The scheme to convert into. Choices are
+                       LatLon.OSGB36 or LatLon.WGS84
+
+        """
         if scheme == self.scheme:
             return
 
         if self.scheme == self.OSGB36 and scheme == self.WGS84:
             txFromOSGB36 = {}
-            for k,v in viewitems(self.DATUM_TRANSFORM['toOSGB36']):
-                txFromOSGB36[k] = -v
+            for key in self.DATUM_TRANSFORM['toOSGB36']:
+                txFromOSGB36[key] = -self.DATUM_TRANSFORM['toOSGB36'][key]
             self.convertEllipsoid(self.ELLIPSIS['Airy1830'],
                                   txFromOSGB36,
                                   self.ELLIPSIS['WGS84'])
@@ -182,7 +194,19 @@ class LatLon(object):
         self.lon = math.degrees(lmbda)
 
 
-def osGridToLatLong(E, N):
+def os_grid_to_latlon(easting, northing):
+    """ Convert an easting and norhting pair into a Lat/Lon using the UK OS Grid system.
+
+    :param easting: 6 digit value
+    :param northing: 6 digit value
+    :returns: An object representing the location.
+    :rtype: LatLon
+    """
+    if not isinstance(easting, (int, long)):
+        easting = int(easting.replace(',', ''))
+    if not isinstance(northing, (int, long)):
+        northing = int(northing.replace(',', ''))
+
     # Airy 1830 major & minor semi-axes
     a = 6377563.396
     b = 6356256.910
@@ -195,24 +219,24 @@ def osGridToLatLong(E, N):
     N0 = -100000
     E0 = 400000
 
-    e2 = 1 - (b*b)/(a*a) # eccentricity squared
-    n = (a-b)/(a+b)
+    e2 = 1 - (b*b) / (a*a) # eccentricity squared
+    n = (a-b) / (a+b)
     n2 = n*n
     n3 = n*n*n
 
-    lat=lat0
-    M=0
+    lat = lat0
+    M = 0
 
     while True:
-        lat += (N-N0-M) / (a*F0)
+        lat += (northing - N0 - M) / (a * F0)
 
-        Ma = (1 + n + (5/4)*n2 + (5/4)*n3) * (lat-lat0)
-        Mb = (3*n + 3*n*n + (21/8)*n3) * math.sin(lat-lat0) * math.cos(lat+lat0)
-        Mc = ((15/8)*n2 + (15/8)*n3) * math.sin(2*(lat-lat0)) * math.cos(2*(lat+lat0))
-        Md = (35/24)*n3 * math.sin(3*(lat-lat0)) * math.cos(3*(lat+lat0))
+        Ma = (1 + n + (5/4) * n2 + (5/4) * n3) * (lat - lat0)
+        Mb = (3*n + 3*n*n + (21/8)*n3) * math.sin(lat - lat0) * math.cos(lat + lat0)
+        Mc = ((15/8) * n2 + (15/8)*n3) * math.sin(2*(lat-lat0)) * math.cos(2 * (lat + lat0))
+        Md = (35/24) * n3 * math.sin(3 * (lat - lat0)) * math.cos(3 * (lat + lat0))
         M = b * F0 * (Ma - Mb + Mc - Md) # meridional arc
         # ie until < 0.01mm
-        if N-N0-M < 0.00001:
+        if northing - N0 - M < 0.00001:
             break
 
     cosLat = math.cos(lat)
@@ -240,67 +264,15 @@ def osGridToLatLong(E, N):
     XII = secLat/(120*nu5)*(5+28*tan2lat+24*tan4lat)
     XIIA = secLat/(5040*nu7)*(61+662*tan2lat+1320*tan4lat+720*tan6lat)
 
-    dE = (E-E0)
-    dE2 = dE*dE
-    dE3 = dE2*dE
-    dE4 = dE2*dE2
-    dE5 = dE3*dE2
-    dE6 = dE4*dE2
-    dE7 = dE5*dE2
+    dE = (easting - E0)
+    dE2 = dE * dE
+    dE3 = dE2 * dE
+    dE4 = dE2 * dE2
+    dE5 = dE3 * dE2
+    dE6 = dE4 * dE2
+    dE7 = dE5 * dE2
 
-    lat -= VII*dE2 + VIII*dE4 - IX*dE6
-    lon = lon0 + X*dE - XI*dE3 + XII*dE5 - XIIA*dE7
+    lat -= VII*dE2 + VIII * dE4 - IX * dE6
+    lon = lon0 + X * dE - XI * dE3 + XII * dE5 - XIIA * dE7
 
     return LatLon(math.degrees(lat), math.degrees(lon), LatLon.OSGB36)
-
-
-"""
-# Convert (OSGB36) latitude/longitude to Ordnance Survey grid reference easting/northing coordinate
-#
-# @param {LatLon} point: OSGB36 latitude/longitude
-# @return {OsGridRef} OS Grid Reference easting/northing
-def latLongToOsGrid() = function(point) {
-  var lat = point.lat().toRad();
-  var lon = point.lon().toRad();
-
-  var a = 6377563.396, b = 6356256.910;          // Airy 1830 major & minor semi-axes
-  var F0 = 0.9996012717;                         // NatGrid scale factor on central meridian
-  var lat0 = (49).toRad(), lon0 = (-2).toRad();  // NatGrid true origin is 49ºN,2ºW
-  var N0 = -100000, E0 = 400000;                 // northing & easting of true origin, metres
-  var e2 = 1 - (b*b)/(a*a);                      // eccentricity squared
-  var n = (a-b)/(a+b), n2 = n*n, n3 = n*n*n;
-
-  var cosLat = Math.cos(lat), sinLat = Math.sin(lat);
-  var nu = a*F0/Math.sqrt(1-e2*sinLat*sinLat);              // transverse radius of curvature
-  var rho = a*F0*(1-e2)/Math.pow(1-e2*sinLat*sinLat, 1.5);  // meridional radius of curvature
-  var eta2 = nu/rho-1;
-
-  var Ma = (1 + n + (5/4)*n2 + (5/4)*n3) * (lat-lat0);
-  var Mb = (3*n + 3*n*n + (21/8)*n3) * Math.sin(lat-lat0) * Math.cos(lat+lat0);
-  var Mc = ((15/8)*n2 + (15/8)*n3) * Math.sin(2*(lat-lat0)) * Math.cos(2*(lat+lat0));
-  var Md = (35/24)*n3 * Math.sin(3*(lat-lat0)) * Math.cos(3*(lat+lat0));
-  var M = b * F0 * (Ma - Mb + Mc - Md);              // meridional arc
-
-  var cos3lat = cosLat*cosLat*cosLat;
-  var cos5lat = cos3lat*cosLat*cosLat;
-  var tan2lat = Math.tan(lat)*Math.tan(lat);
-  var tan4lat = tan2lat*tan2lat;
-
-  var I = M + N0;
-  var II = (nu/2)*sinLat*cosLat;
-  var III = (nu/24)*sinLat*cos3lat*(5-tan2lat+9*eta2);
-  var IIIA = (nu/720)*sinLat*cos5lat*(61-58*tan2lat+tan4lat);
-  var IV = nu*cosLat;
-  var V = (nu/6)*cos3lat*(nu/rho-tan2lat);
-  var VI = (nu/120) * cos5lat * (5 - 18*tan2lat + tan4lat + 14*eta2 - 58*tan2lat*eta2);
-
-  var dLon = lon-lon0;
-  var dLon2 = dLon*dLon, dLon3 = dLon2*dLon, dLon4 = dLon3*dLon, dLon5 = dLon4*dLon, dLon6 = dLon5*dLon;
-
-  var N = I + II*dLon2 + III*dLon4 + IIIA*dLon6;
-  var E = E0 + IV*dLon + V*dLon3 + VI*dLon5;
-
-  return new OsGridRef(E, N);
-}
-"""
-
