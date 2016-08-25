@@ -37,7 +37,6 @@ def decc_extract(args):
     :returns: DECC :class:`MonthlyExtract` object
     :rtype: MonthlyExtract
     """
-    print("DECC Monthly Planning Extract\n")
 
     decc = MonthlyExtract(args.input)
     if decc.get_data() is False:
