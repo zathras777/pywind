@@ -36,7 +36,10 @@ from __future__ import print_function
 import logging
 import os
 from lxml import etree
-from urllib import unquote
+try:
+    from urllib import unquote
+except ImportError:
+    from urllib.parse import unquote
 
 from pywind.ofgem.form_data import FormData
 from pywind.utils import get_or_post_a_url
