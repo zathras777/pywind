@@ -51,6 +51,7 @@ from .geo import Coord
 class DeccRecord(object):
     """
     Simple class to hold details of one DECC station.
+
     """
     DATE_FIELDS = ('record_last_updated_(dd_mm_yyyy)',
                    'planning_application_submitted',
@@ -113,7 +114,14 @@ class DeccRecord(object):
                 elif key in self.BOOLEAN_FIELDS:
                     val = _convert_type(val, 'bool')
                 else:
-                    val = val.decode('latin1').encode('utf-8')
+
+#                    if sys.version_info >= (3, 0):
+#                        print(type(val))
+#                        val = str(val, 'utf-8')
+#                    else:
+                   if sys.version_info < (3, 0):
+                        val = val.decode('latin1').encode('utf-8')
+
             self.attrs[key] = val
 
         if self.attrs.get('x-coordinate') is not None and self.attrs.get('y-coordinate') is not None:
@@ -129,6 +137,10 @@ class DeccRecord(object):
 class MonthlyExtract(object):
     """
     The MonthlyExtract class allows the current monthly data to be easily retrieved and parsed.
+
+    .. note::
+
+     The CSV data returned does not declare an encoding, so latin1 is presently assumed.
 
     """
     BASE_URL = "https://www.gov.uk"
@@ -165,9 +177,10 @@ class MonthlyExtract(object):
 
         response = get_or_post_a_url(self.available['url'])
         self.raw_data = response.content
+        pprint(response.headers)
 
         if sys.version_info >= (3, 0):
-            csvfile = csv.reader(codecs.iterdecode(response.content.splitlines(), 'utf-8'))
+            csvfile = csv.reader(codecs.iterdecode(response.content.splitlines(), 'latin1'))
         else:
             csvfile = csv.reader(response.content.splitlines())
 
@@ -216,10 +229,15 @@ class MonthlyExtract(object):
                           'url': self.BASE_URL + links[0].get('href')}
 
     def _parse_filename(self):
-        with open(self.filename, 'r') as ofh:
-            csvfile = csv.reader(ofh)
+        with open(self.filename, 'rb') as ofh:
+            if sys.version_info >= (3, 0):
+                csvfile = csv.reader(codecs.iterdecode(ofh, 'latin1'))
+            else:
+                csvfile = csv.reader(ofh)
+
             for row in csvfile:
                 self._parse_row(row)
+
         self.available = {'period': 'Unknown'}
         return True
 

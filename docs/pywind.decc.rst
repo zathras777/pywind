@@ -10,7 +10,7 @@
 :mod:`pywind.decc.Report`
 -------------------------
 
-.. automodule:: pywind.decc.Report
+.. automodule:: pywind.decc.extract
     :members:
     :undoc-members:
     :show-inheritance:
@@ -23,3 +23,11 @@
     :undoc-members:
     :show-inheritance:
     :special-members: __init__
+
+:mod:`pywind.decc.utils`
+------------------------
+
+.. automodule:: pywind.decc.utils
+    :members:
+    :undoc-members:
+    :show-inheritance:
