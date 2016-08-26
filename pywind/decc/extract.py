@@ -114,12 +114,7 @@ class DeccRecord(object):
                 elif key in self.BOOLEAN_FIELDS:
                     val = _convert_type(val, 'bool')
                 else:
-
-#                    if sys.version_info >= (3, 0):
-#                        print(type(val))
-#                        val = str(val, 'utf-8')
-#                    else:
-                   if sys.version_info < (3, 0):
+                    if sys.version_info < (3, 0):
                         val = val.decode('latin1').encode('utf-8')
 
             self.attrs[key] = val
@@ -211,6 +206,7 @@ class MonthlyExtract(object):
             ofh.write(self.raw_data)
         return True
 
+    # Private functions
     def _find_available(self):
         """
         Get the URL and period for the currently available download.
