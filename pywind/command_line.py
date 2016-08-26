@@ -92,7 +92,7 @@ def main():
         filename = args.original or args.command
         if hasattr(obj, 'save_original'):
             if obj.save_original(filename) is False:
-                print("Unable to save the downloadd data :-(")
+                print("Unable to save the downloaded data :-(")
             else:
                 print("Downloaded data saved to {}".format(filename))
         else:
