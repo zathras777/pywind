@@ -86,6 +86,9 @@ def _make_xml_string(val):
     if isinstance(val, date):
         return val.strftime("%Y-%m-%d")
     val = val.replace('(', '').replace(')', '').replace('/', '_')
+
+    if sys.version_info >= (3, 0):
+        return val
     return val.decode('utf-8')
 
 
