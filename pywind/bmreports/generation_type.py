@@ -34,10 +34,12 @@ access to their report on output by generation type for the 3 periods,
  - last 24 hours
 
 """
-
+import os
 from datetime import datetime, timedelta
 
-from pywind.utils import parse_response_as_xml, get_or_post_a_url
+import sys
+
+from pywind.utils import parse_response_as_xml, get_or_post_a_url, _convert_type
 
 
 class GenerationRecord(object):
@@ -66,8 +68,8 @@ class GenerationRecord(object):
         """
         self.type = el.get("TYPE")
         self.icr = el.get("IC")
-        self.val = el.get("VAL")
-        self.pct = el.get("PCT")
+        self.val = _convert_type(el.get("VAL"), 'int')
+        self.pct = _convert_type(el.get("PCT"), 'float')
 
     def __repr__(self):
         return u"%s" % self.FUELS[self.type]
@@ -161,6 +163,30 @@ class GenerationData(object):
 
         for section in ['INST', 'HH', 'LAST24H']:
             self.sections.append(GenerationPeriod(self.xml.xpath(section)[0]))
+
+    def save_original(self, filename):
+        """ Save the downloaded certificate data into the filename provided.
+
+        :param filename: Filename to save the file to.
+        :rtype: bool
+        """
+
+        if self.xml is None:
+            return False
+        name, ext = os.path.splitext(filename)
+        if ext is '':
+            filename += '.xml'
+        self.xml.write(filename)
+        return True
+
+    def rows(self):
+        """ Return export data as a series of rows.
+
+        :rtype: dict
+        """
+        for sect in self.sections:
+            for rec in self.sections[sect]:
+                yield rec
 
     def as_dict(self):
         """ Return the data as a dict object.

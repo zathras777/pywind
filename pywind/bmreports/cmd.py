@@ -42,25 +42,24 @@ def bm_generation_type(args):
     gdd.get_data()
     data = gdd.as_dict()
 
-    ROW_FMT = "  {:8s} {:40s} {:5s} {:>10s} {:>12s}"
-    row_titles = ROW_FMT.format('Code', 'Generation Type', 'Intcr',
-                                'Output', 'Percentage') + "\n" + \
-                 ROW_FMT.format('-' * 8, '-' * 40, '-' * 5, '-' * 10, '-' * 12)
+    fmt = StdoutFormatter("8s", "40s", "5s", "10d", "12.3f")
+    row_titles = fmt.titles('Code', 'Generation Type', 'Intcr', 'Output', 'Percentage')
 
+    print(data)
     for sect in data.keys():
         if 'start' in data[sect]:
             print("{} - started {}".format(sect.title(), data[sect]['start']))
         if 'finish' in data[sect]:
-            print("{} - finished {}".format(" " * len(sect.title()), data[sect]['start']))
+            print("{} - finished {}".format(" " * len(sect.title()), data[sect]['finish']))
 
         else:
             print(sect.title())
 
         print("\n" + row_titles)
         for typ in data[sect]['data']:
-            print(ROW_FMT.format(typ['code'], typ['name'],
-                                 '  Y' if typ['interconnector'] else '  N',
-                                 typ['value'], typ['percent']))
+            print(fmt.row(typ['code'], typ['name'],
+                              '  Y' if typ['interconnector'] else '  N',
+                              typ['value'], typ['percent']))
         print("\n")
     return gdd
 

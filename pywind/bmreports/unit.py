@@ -114,6 +114,22 @@ class UnitData(object):
             return self._process(resp)
         return False
 
+    def save_original(self, filename):
+        """ Save the downloaded certificate data into the filename provided.
+
+        :param filename: Filename to save the file to.
+        :returns: True or False
+        :rtype: bool
+        """
+
+        if self.xml is None:
+            return False
+        name, ext = os.path.splitext(filename)
+        if ext is '':
+            filename += '.xml'
+        self.xml.write(filename)
+        return True
+
     def as_dict(self):
         return {
             'date': self.date.strftime("%y-%m-%d"),
@@ -163,11 +179,11 @@ class UnitData(object):
             should be shown in the ORIGINAL elements.
             Units can have both Bid & Offer results in the same Settlement Period.
         """
-        root = parse_response_as_xml(req)
-        if root is None:
+        self.xml = parse_response_as_xml(req)
+        if self.xml is None:
             return False
 
-        for bmu in root.xpath(".//ACCEPT_PERIOD_TOTS//*//BMU"):
+        for bmu in self.xml.xpath(".//ACCEPT_PERIOD_TOTS//*//BMU"):
             bmud = {
                 'id': bmu.get('ID'),
                 'type': bmu.get('TYPE'),
@@ -187,6 +203,7 @@ class BaseUnitClass(object):
 
     def __init__(self):
         self.units = []
+        self.raw_data = None
         self.get_list()
 
     def __len__(self):
@@ -195,14 +212,15 @@ class BaseUnitClass(object):
     def get_list(self):
         """ Download and update the unit list.
 
-        :returns: True
         :rtype: bool
         """
         self.units = []
-        req = get_or_post_a_url(self.XLS_URL)
+        resp = get_or_post_a_url(self.XLS_URL)
+        self.raw_data = resp.content
+
         tmp_f = NamedTemporaryFile(delete=False)
-        with open(tmp_f.name, 'w') as fhh:
-            fhh.write(req.content)
+        with open(tmp_f.name, 'wb') as fhh:
+            fhh.write(resp.content)
 
         wbb = xlrd.open_workbook(tmp_f.name)
         sht = wbb.sheet_by_name(self.SHEET_NAME)
@@ -214,6 +232,23 @@ class BaseUnitClass(object):
             os.unlink(tmp_f.name)
         except Exception:
             pass
+        return True
+
+    def save_original(self, filename):
+        """ Save the downloaded certificate data into the filename provided.
+
+        :param filename: Filename to save the file to.
+        :returns: True or False
+        :rtype: bool
+        """
+
+        if self.raw_data is None:
+            return False
+        name, ext = os.path.splitext(filename)
+        if ext is '':
+            filename += '.xlsx'
+        with open(filename, "wb") as xfh:
+            xfh.write(self.raw_data)
         return True
 
     def rows(self):
@@ -237,6 +272,11 @@ class UnitList(BaseUnitClass):
     SHEET_NAME = "BMU Fuel Types"
 
     def by_fuel_type(self, fuel):
+        """Return data filtered by fuel type.
+
+        :param fuel: The fuel type to return details for.
+        :rtype: list
+        """
         units = []
         for unit in self.units:
             if unit['fuel_type'].lower() == fuel.lower():

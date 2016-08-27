@@ -28,7 +28,7 @@
 """ BMReports make the system electricity prices available. This module contains
 classes to access those reports.
 """
-
+import os
 from datetime import date, datetime
 
 from pywind.utils import get_or_post_a_url, parse_response_as_xml
@@ -40,6 +40,7 @@ class SystemPrices(object):
 
     def __init__(self, dtt=None):
         self.dtt = dtt or date.today()
+        self.xml = None
         self.prices = []
 
     def get_data(self):
@@ -47,11 +48,11 @@ class SystemPrices(object):
         data = {'element': 'SYSPRICE',
                 'dT': self.dtt.strftime("%Y-%m-%d")}
         resp = get_or_post_a_url(self.URL, params=data)
-        root = parse_response_as_xml(resp)
-        if root is None:
+        self.xml = parse_response_as_xml(resp)
+        if self.xml is None:
             return False
 
-        for elm in root.xpath('.//ELEMENT'):
+        for elm in self.xml.xpath('.//ELEMENT'):
             data = {}
             for elm2 in elm.getchildren():
                 if elm2.tag == 'SP':
@@ -62,6 +63,22 @@ class SystemPrices(object):
                     data[elm2.tag.lower()] = elm2.text
             self.prices.append(data)
         return len(self.prices) > 0
+
+    def save_original(self, filename):
+        """ Save the downloaded certificate data into the filename provided.
+
+        :param filename: Filename to save the file to.
+        :returns: True or False
+        :rtype: bool
+        """
+
+        if self.xml is None:
+            return False
+        name, ext = os.path.splitext(filename)
+        if ext is '':
+            filename += '.xml'
+        self.xml.write(filename)
+        return True
 
     def as_dict(self):
         """ Return the data as a dict. """
