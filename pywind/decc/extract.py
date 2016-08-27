@@ -221,7 +221,7 @@ class MonthlyExtract(object):
         """
         if self.raw_data is None:
             return False
-        with open(filename, 'w') as ofh:
+        with open(filename, 'wb') as ofh:
             ofh.write(self.raw_data)
         return True
 
