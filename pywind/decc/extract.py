@@ -53,7 +53,7 @@ class DeccRecord(object):
     Simple class to hold details of one DECC station.
 
     """
-    DATE_FIELDS = ('record_last_updated_(dd_mm_yyyy)',
+    DATE_FIELDS = ('record_last_updated_dd_mm_yyyy',
                    'planning_application_submitted',
                    'planning_application_withdrawn',
                    'planning_permission_refused',
@@ -63,6 +63,7 @@ class DeccRecord(object):
                    'appeal_granted',
                    'planning_permission_granted',
                    'planning_permission_granted',
+                   'record_last_updated_dd_mm_yyyy',
                    'secretary_of_state___intervened',
                    'secretary_of_state___refusal',
                    'secretary_of_state___granted',
@@ -83,12 +84,12 @@ class DeccRecord(object):
                       'project_specific',
                       'chp'
                      )
-    FLOAT_FIELDS = ('installed_capacity_(mwelec)',
-                    'ro_banding_(roc_mwh)',
-                    'fit_tariff_(p_kwh)',
-                    'cfd_capacity_(mw)',
-                    'turbine_capacity_(mw)',
-                    'height_of_turbines_(m)'
+    FLOAT_FIELDS = ('installed_capacity_mwelec',
+                    'ro_banding_roc_mwh',
+                    'fit_tariff_p_kwh',
+                    'cfd_capacity_mw',
+                    'turbine_capacity_mw',
+                    'height_of_turbines_m'
                    )
     INT_FIELDS = ('ref_id',
                   'no._of_turbines',
@@ -100,6 +101,7 @@ class DeccRecord(object):
         self.attrs = {}
         for key in app_info.keys():
             val = app_info[key]
+            key = key.replace('(', '').replace(')', '').replace('/', '_')
             if val == '':
                 val = None
             else:
@@ -127,6 +129,19 @@ class DeccRecord(object):
         if item in self.attrs:
             return self.attrs[item]
         raise AttributeError(item)
+
+    def __contains__(self, item):
+        return item in self.attrs
+
+    def fit_rate_mwh(self):
+        """ Convert the FIT Tariff rate into GBP per MWh.
+
+        :rtype: float
+        """
+        fit = self.attrs.get('fit_tariff_(p_kwh)', 0)
+        if fit in [0.0, None]:
+            return 0.0
+        return fit * 10
 
 
 class MonthlyExtract(object):
@@ -156,6 +171,9 @@ class MonthlyExtract(object):
         """
         return len(self.records)
 
+    def __getitem__(self, item):
+        return self.records[item]
+
     def get_data(self):
         """ Get the data from the DECC server and parse it into DECC records.
 
@@ -181,6 +199,7 @@ class MonthlyExtract(object):
 
         for row in csvfile:
             self._parse_row(row)
+        self.records = sorted(self.records, key=lambda rec: rec.site_name)
         return True
 
     def rows(self):
@@ -235,6 +254,7 @@ class MonthlyExtract(object):
                 self._parse_row(row)
 
         self.available = {'period': 'Unknown'}
+        self.records = sorted(self.records, key=lambda rec: rec.site_name)
         return True
 
     def _parse_row(self, row):
