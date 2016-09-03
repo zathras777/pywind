@@ -110,8 +110,6 @@ class FormData(object):
             with open(stored_file, "r") as ofh:
                 self._parse(ofh.read())
         elif len(initial_data) > 0:
-            with open("stored_file.xml", "w") as wfh:
-                wfh.write(initial_data)
             self.logger.debug("%d bytes of initial data supplied for FormData", len(initial_data))
             self._parse(initial_data)
 
@@ -119,8 +117,6 @@ class FormData(object):
         self._add_element('__ASYNCPOST', value='true')
         self._add_element('__LASTFOCUS', value='')
         self._add_element('__EVENTTARGET', value='')
-
-#        pprint(self.labels)
 
     def update(self, content=""):
         """ Given some content, update the form.
