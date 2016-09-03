@@ -64,6 +64,15 @@ class SystemPrices(object):
             self.prices.append(data)
         return len(self.prices) > 0
 
+    def rows(self):
+        """Generator to return rows for export.
+
+        :returns: Dict containing information for a single price period.
+        :rtype: dict
+        """
+        for per in self.prices:
+            yield {'PricePeriod': {'@{}'.format(key):per[key] for key in per}}
+
     def save_original(self, filename):
         """ Save the downloaded certificate data into the filename provided.
 
