@@ -30,6 +30,8 @@
 import copy
 from lxml import etree
 
+from lxml.etree import XMLParser
+
 from pywind.ofgem.form import OfgemForm
 from pywind.ofgem.objects import Station, Certificates
 
@@ -302,7 +304,8 @@ class StationSearch(object):
         if not self.form.submit():
             return False
 
-        doc = etree.fromstring(self.form.raw_data)
+        parser = XMLParser(huge_tree=True)
+        doc = etree.fromstring(self.form.raw_data, parser=parser)
         # There are a few stations with multiple generator id's, separated by '\n' so
         # capture them and add each as a separate entry.
         for detail in doc.xpath("//*[local-name()='Detail']"):
