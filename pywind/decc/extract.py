@@ -190,7 +190,6 @@ class MonthlyExtract(object):
 
         response = get_or_post_a_url(self.available['url'])
         self.raw_data = response.content
-        pprint(response.headers)
 
         if sys.version_info >= (3, 0):
             csvfile = csv.reader(codecs.iterdecode(response.content.splitlines(), 'latin1'))
