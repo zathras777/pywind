@@ -107,7 +107,6 @@ def _export_xml(obj, filename):
                 node.append(new_node)
 
     for info in obj.rows():
-        pprint(info)
         for key in info.keys():
             node_data = info[key]
             node = etree.Element(key)
