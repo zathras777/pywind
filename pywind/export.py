@@ -96,15 +96,18 @@ def _export_xml(obj, filename):
     root = etree.Element(obj.__class__.__name__)
 
     def _walk_dict(node, data_dict):
-        for attr in data_dict.keys():
-            if data_dict[attr] is None:
-                continue
-            if attr.startswith('@'):
-                node.attrib[_make_xml_string(attr[1:])] = _make_xml_string(data_dict[attr])
-            else:
-                new_node = etree.Element(attr)
-                _walk_dict(new_node, data_dict[attr])
-                node.append(new_node)
+        if isinstance(data_dict, dict):
+            for attr in data_dict.keys():
+                if data_dict[attr] is None:
+                    continue
+                if attr.startswith('@'):
+                    node.attrib[_make_xml_string(attr[1:])] = _make_xml_string(data_dict[attr])
+                else:
+                    new_node = etree.Element(attr)
+                    _walk_dict(new_node, data_dict[attr])
+                    node.append(new_node)
+        else:
+            node.text = data_dict
 
     for info in obj.rows():
         for key in info.keys():
