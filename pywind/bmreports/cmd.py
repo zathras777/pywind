@@ -91,17 +91,20 @@ def bm_unitdata(args):
         print("Unable to get unit data.")
         sys.exit(0)
 
-    fmt = StdoutFormatter('7s', '30s', '>10s', '>10s', '>10s', '>10s', '>10s', '>10s')
+    print("Data is for period {}, {}".format(udd.period, udd.date))
+    fmt = StdoutFormatter('9s', '30s', '>10s', '>10s', '>10s', '>10s', '>10s', '>10s', '>10.4f', ">10.4f")
     print("{:43s}     Bid Volume              Offer Volume           Cashflow".format(' '))
-    print(fmt.titles("NGC", 'Lead', 'Original', 'Tagged', 'Original', 'Tagged', 'Bid', 'Offer'))
+    print(fmt.titles("NGC", 'Lead', 'Original', 'Tagged', 'Original', 'Tagged', 'Bid', 'Offer', 'Bid Rate', 'Offer Rate'))
     for bmu in udd.data:
-        print(fmt.row(bmu['ngc'], bmu['lead'],
-                      multi_level_get(bmu, 'volume.bid_values.original.total.value', 'n/a'),
-                      multi_level_get(bmu, 'volume.bid_values.tagged.total.value', 'n/a'),
-                      multi_level_get(bmu, 'volume.offer_values.original.total.value', 'n/a'),
-                      multi_level_get(bmu, 'volume.offer_values.tagged.total.value', 'n/a'),
-                      multi_level_get(bmu, 'cashflow.bid_values.total.value', 'n/a'),
-                      multi_level_get(bmu, 'cashflow.offer_values.total.value', 'n/a')))
+        print(fmt.row(bmu.id, bmu.lead,
+                      multi_level_get(bmu.volume, 'bid_values.original.total.value', 'n/a'),
+                      multi_level_get(bmu.volume, 'bid_values.tagged.total.value', 'n/a'),
+                      multi_level_get(bmu.volume, 'offer_values.original.total.value', 'n/a'),
+                      multi_level_get(bmu.volume, 'offer_values.tagged.total.value', 'n/a'),
+                      multi_level_get(bmu.cashflow, 'bid_values.total.value', 'n/a'),
+                      multi_level_get(bmu.cashflow, 'offer_values.total.value', 'n/a'),
+                      bmu.rate("bid"),
+                      bmu.rate("offer")))
     return udd
 
 

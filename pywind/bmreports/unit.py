@@ -35,7 +35,7 @@ import xlrd
 from datetime import timedelta, date, datetime
 from tempfile import NamedTemporaryFile
 
-from pywind.utils import parse_response_as_xml, get_or_post_a_url, _convert_type
+from pywind.utils import parse_response_as_xml, get_or_post_a_url, _convert_type, multi_level_get
 
 
 def _mkdate(book, sheet, row, col):
@@ -53,6 +53,38 @@ def _walk_nodes(elm):
     if elm.text is not None:
         data['value'] = elm.text
     return data
+
+
+class BalancingUnitData(object):
+    """Class to store balancing payment information for a single unit during
+    a single period.
+    """
+    def __init__(self, xml_node):
+        self.id = xml_node.get('ID')
+        self.type = xml_node.get('TYPE')
+        self.lead = xml_node.get('LEAD_PARTY')
+        self.name = xml_node.get('NGC_NAME')
+        self.cashflow = _walk_nodes(xml_node.xpath('.//CASHFLOW')[0])
+        self.volume = _walk_nodes(xml_node.xpath('.//VOLUME')[0])
+
+    def rate(self, which):
+        """Extract the rate paid for either "bid" or "offer" from the data.
+
+         :param which: "bid" or "offer"
+         :returns: The calculated rate
+         :rtype: float
+        """
+        if which.lower() not in ["bid", "offer"]:
+            return 0.0
+        if which.lower() == "bid":
+            volume = multi_level_get(self.volume, "bid_values.original.total.value", '0.0')
+            cash = multi_level_get(self.cashflow, "bid_values.total.value", '0.0')
+        else:
+            volume = multi_level_get(self.volume, "offer_values.original.total.value", '0.0')
+            cash = multi_level_get(self.cashflow, "offer_values.total.value", '0.0')
+        if cash == '0.0' or volume == '0.0':
+            return 0.0
+        return float(cash) / float(volume)
 
 
 class UnitData(object):
@@ -113,6 +145,20 @@ class UnitData(object):
                                      params=params)
             return self._process(resp)
         return False
+
+    def rows(self):
+        """Generator to provide export data.
+
+        :rtype: dict
+        :returns: Dict formatted for internal export functions.
+        """
+        for station in self.data:
+            row = {'@period': self.period, '@date': self.date,
+                   '@ngc': station['id'],
+                   '@cxtype': station['type'],
+                   'cashflow': station['cashflow'],
+                   'volume': station['volume']}
+            yield {'BalancingDetail': row}
 
     def save_original(self, filename):
         """ Save the downloaded certificate data into the filename provided.
@@ -184,15 +230,20 @@ class UnitData(object):
             return False
 
         for bmu in self.xml.xpath(".//ACCEPT_PERIOD_TOTS//*//BMU"):
-            bmud = {
-                'id': bmu.get('ID'),
-                'type': bmu.get('TYPE'),
-                'lead': bmu.get('LEAD_PARTY'),
-                'ngc': bmu.get('NGC_NAME'),
-            }
-            bmud['cashflow'] = _walk_nodes(bmu.xpath('.//CASHFLOW')[0])
-            bmud['volume'] = _walk_nodes(bmu.xpath('.//VOLUME')[0])
-            self.data.append(bmud)
+            bud = BalancingUnitData(bmu)
+#            bmu.get('ID'),
+#                                    bmu.get('TYPE'),
+#                                    bmu.get('LEAD_PARTY'),
+#                                    bmu.get('NGC_NAME'))
+#            bmud = {
+#                'id': bmu.get('ID'),
+#                'type': bmu.get('TYPE'),
+#                'lead': bmu.get('LEAD_PARTY'),
+#                'ngc': bmu.get('NGC_NAME'),
+#            }
+#            bmud['cashflow'] = _walk_nodes(bmu.xpath('.//CASHFLOW')[0])
+#            bmud['volume'] = _walk_nodes(bmu.xpath('.//VOLUME')[0])
+            self.data.append(bud)
         return len(self.data) > 0
 
 
