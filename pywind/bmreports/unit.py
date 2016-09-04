@@ -86,6 +86,42 @@ class BalancingUnitData(object):
             return 0.0
         return float(cash) / float(volume)
 
+    @property
+    def bid_volume(self):
+        """Get the bid volume.
+
+        :rtype: float
+        :returns: Bid volume or 0.0
+        """
+        return float(multi_level_get(self.volume, "bid_values.original.total.value", '0.0'))
+
+    @property
+    def offer_volume(self):
+        """Get the bid volume.
+
+        :rtype: float
+        :returns: Bid volume or 0.0
+        """
+        return float(multi_level_get(self.volume, "offer_values.original.total.value", '0.0'))
+
+    @property
+    def bid_cashflow(self):
+        """Return the bid cashflow.
+
+        :rtype: float
+        :returns: Bid cashflow or 0.0
+        """
+        return float(multi_level_get(self.cashflow, "bid_values.total.value", '0.0'))
+
+    @property
+    def offer_cashflow(self):
+        """Return the bid cashflow.
+
+        :rtype: float
+        :returns: Bid cashflow or 0.0
+        """
+        return float(multi_level_get(self.cashflow, "offer_values.total.value", '0.0'))
+
 
 class UnitData(object):
     """ Class that gets data about Balancing Mechanism Units
