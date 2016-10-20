@@ -216,6 +216,8 @@ def _convert_type(val, typ):
     :return: Converted value
     :raises: ValueError
     """
+    if sys.version_info >= (3,0) and isinstance(val, bytes):
+        val = val.decode()
     if typ in ['int', 'float'] and isinstance(val, str):
         val = val.replace(',', '')
     if typ == 'int':

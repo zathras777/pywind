@@ -20,3 +20,11 @@ class ROCTest(unittest.TestCase):
         self.assertTrue(erp.process_file(os.path.join(here, 'files', 'eroc.html')))
         self.assertTrue('200704' in erp.periods)
         self.assertEqual(erp['200704'], 47.51)
+
+    def test_remote(self):
+        """ Remote file test.
+        """
+        erp = EROCPrices()
+        self.assertTrue(erp.get_prices())
+        self.assertTrue('200704' in erp.periods)
+        self.assertEqual(erp['200704'], 47.51)

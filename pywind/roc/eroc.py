@@ -27,6 +27,7 @@
 
 from datetime import datetime
 import html5lib
+import sys
 
 from pywind.utils import get_or_post_a_url, _convert_type
 
@@ -67,8 +68,12 @@ class EROCPrices(object):
         """
         self.auctions = []
         self.periods = {}
-        with open(local_file, "r") as lfh:
-            self._parse_content(lfh.read())
+        if sys.version_info >= (3, 0):
+            with open(local_file, "r", encoding='iso-8859-1') as lfh:
+                self._parse_content(lfh.read())
+        else:
+            with open(local_file, "r") as lfh:
+                self._parse_content(lfh.read())
         return True
 
     def get_prices(self):
