@@ -310,8 +310,8 @@ class StationSearch(object):
         # capture them and add each as a separate entry.
         for detail in doc.xpath("//*[local-name()='Detail']"):
             stt = Station(detail)
-            if b'\n' in stt.generator_id:
-                ids = [x.strip() for x in stt.generator_id.split(b'\n')]
+            if '\n' in stt.generator_id:
+                ids = [x.strip() for x in stt.generator_id.split('\n')]
                 stt.generator_id = ids[0]
                 for _id in ids[1:]:
                     _st = copy.copy(stt)

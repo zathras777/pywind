@@ -36,6 +36,8 @@ import html5lib
 import re
 from pprint import pprint
 
+import sys
+
 
 def element_attributes(elm):
     """ Return a dict of the basic attributes we want from an XML element. """
@@ -126,6 +128,9 @@ class FormData(object):
         :rtype: bool
         """
         content = content.strip()
+        if sys.version_info >= (3,0):
+            content = content.decode()
+
         if len(content) == 0:
             return False
 
@@ -426,7 +431,7 @@ class FormData(object):
             elif 'script' in comp[0]:
                 if 'ExportUrlBase' in comp[2]:
                     export_base = re.search('\"ExportUrlBase\":\"(.*?)\",', comp[2])
-                    self.export_url = export_base.group(1).replace('\u0026', '&')
+                    self.export_url = export_base.group(1).replace('\\u0026', '&')
                     self.logger.debug(" - found export url: %s", self.export_url)
         return True
 

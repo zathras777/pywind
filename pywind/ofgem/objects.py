@@ -202,8 +202,8 @@ class Station(OfgemObjectBase):
         OfgemObjectBase.__init__(self, node)
 
         # catch/correct some odd results I have observed...
-        if self.attrs['technology'] is not None and b'\n' in self.attrs['technology']:
-            self.attrs['technology'] = self.attrs['technology'].split(b'\n')[0]
+        if self.attrs['technology'] is not None and '\n' in self.attrs['technology']:
+            self.attrs['technology'] = self.attrs['technology'].split('\n')[0]
 
 
 class CertificateStation(object):

@@ -36,6 +36,7 @@ from __future__ import print_function
 import logging
 import os
 from lxml import etree
+
 try:
     from urllib import unquote
 except ImportError:
@@ -47,6 +48,7 @@ from pywind.utils import get_or_post_a_url
 
 def _make_url(url, public=True):
     OFGEM = 'https://www.renewablesandchp.ofgem.gov.uk'
+
     if url.startswith('http'):
         return url
 
@@ -56,6 +58,7 @@ def _make_url(url, public=True):
     if url.startswith('./'):
         url = url[2:]
     if public is True:
+        OFGEM = 'https://www.renewablesandchp.ofgem.gov.uk'
         return os.path.join(OFGEM, 'Public', url)
     return os.path.join(OFGEM, url)
 
@@ -113,6 +116,7 @@ class OfgemForm(object):
         if self.form_data.export_url is None:
             self.logger.warning("Unable to find the export url. Cannot continue.")
             return False
+
         export_url = _make_url(self.form_data.export_url) + 'XML'
         response = get_or_post_a_url(export_url, cookies=self.cookies)
         self.raw_data = response.content

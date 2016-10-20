@@ -245,9 +245,11 @@ def _convert_type(val, typ):
             return True
         return False
     elif typ == 'address':
-        if sys.version_info < (3, 0):
-            return val.replace('\r', ', ')
-        return val.decode().replace('\r', ', ').encode('utf-8')
+#        print(val)
+#        print(type(val))
+#        if sys.version_info < (3, 0):
+#            return val.replace('\r', ', ')
+        return val.replace('\r', ', ')
     elif typ == 'period':
         # Convert 201601 to 01-01-2016
         yyr = val / 100
@@ -255,9 +257,9 @@ def _convert_type(val, typ):
         return date(yyr, mon, 1)
 
     elif typ == 'str':
-        if val[0] == b"'" and val[-1] == b"'":
+        if val[0] == "'" and val[-1] == "'":
             val = val[1:-1]
-    return val
+    return str(val)
 
 
 class StdoutFormatter(object):
