@@ -102,7 +102,7 @@ class DeccRecord(object):
         for key in app_info.keys():
             val = app_info[key]
             key = key.replace('(', '').replace(')', '').replace('/', '_')
-            if val == '':
+            if val in ['', '#REF!']:
                 val = None
             else:
                 if key in self.INT_FIELDS + self.FLOAT_FIELDS and val.lower() == 'n/a':
