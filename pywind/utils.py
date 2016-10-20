@@ -227,11 +227,14 @@ def _convert_type(val, typ):
             return 0.0
     elif typ == 'date':
         # Incredibly Ofgem has several places where there are newlines in dates!
-        if b'\n' in val:
+        if '\n' in val:
             val = val.split(b"\n")[0]
         for fmt in ['%d/%m/%Y', '%Y-%m-%d', '%Y-%m-%dT%H:%M:00']:
             try:
-                return datetime.strptime(val.decode(), fmt).date()
+                if sys.version_info >= (3, 0):
+                    return datetime.strptime(val, fmt).date()
+                else:
+                    return datetime.strptime(val.decode(), fmt).date()
             except ValueError:
                 pass
         raise ValueError("Unable to parse date {}".format(val))
