@@ -107,15 +107,18 @@ def valid_date(dtstr):
         raise argparse.ArgumentTypeError("Not a valid date: '{0}'.".format(dtstr))
 
 
-def commandline_parser(help_text):
+def commandline_parser(help_text, epilog=None):
     """
     Simple function to create a command line parser with some generic options.
 
     :param help_text: The script description
+    :param epilog: Epilog text
     :returns: Argument parser
     :rtype: :class:`argparse.ArgumentParser`
     """
-    parser = argparse.ArgumentParser(description=help_text)
+    parser = argparse.ArgumentParser(description=help_text,
+                                     epilog=epilog,
+                                     formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('--debug', action='store_true', help='Enable debugging')
     parser.add_argument('--request-debug', action='store_true',
                         help='Enable debugging of requests')
@@ -130,6 +133,7 @@ def commandline_parser(help_text):
                         help='Save downloaded file in original format')
     parser.add_argument('--original', help='Filename for original format file (use with --save)')
     parser.add_argument('--station', help='Station name to filter for (Ofgem only)')
+    parser.add_argument('-v', '--version', action='store_true', help='Show version number')
     return parser
 
 

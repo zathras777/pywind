@@ -40,6 +40,7 @@ from pywind.ofgem.cmd import ofgem_certificate_search,\
 from pywind.roc.cmd import roc_prices
 from pywind.utils import commandline_parser
 from pywind.export import export_to_file
+from pywind import __version__
 
 
 COMMANDS = [
@@ -65,21 +66,31 @@ def build_command_names():
         COMMAND_NAMES[cmd.__name__] = {'name': doc, 'function': cmd}
 
 
+def commands_help():
+    hlp = "Commands presently available are:\n\n"
+    for key in sorted(COMMAND_NAMES):
+        hlp += "  {:30s}  {}\n".format(key, COMMAND_NAMES[key]['name'])
+    return hlp
+
+
 def main():
     """ Main command line function.
     """
     build_command_names()
-    parser = commandline_parser("pywind command line app")
-    parser.add_argument('command', nargs='?', help='Command to execute')
+    parser = commandline_parser("pywind command line app, version {}".format(__version__),
+                                epilog=commands_help())
+    parser.add_argument('command', nargs='?', help='Command to execute (see below for list)')
     args = parser.parse_args()
+
+    if args.version:
+        print("pywind version {}".format(__version__))
+        sys.exit(0)
 
     cmd = COMMAND_NAMES.get(args.command, None)
     if cmd is None:
         if args.command is not None:
             print("Invalid command specified: {}".format(args.command))
-        print("Possible commands are:")
-        for key in sorted(COMMAND_NAMES):
-            print("  {:30s}  {}".format(key, COMMAND_NAMES[key]['name']))
+        print(commands_help())
         sys.exit(0)
 
     setup_logging(args.debug, request_logging=args.request_debug,
