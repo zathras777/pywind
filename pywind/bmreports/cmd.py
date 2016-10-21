@@ -71,6 +71,7 @@ def bm_system_prices(args):
     else:
         spp = SystemPrices()
         print("\nNo date specified, using today.\n")
+
     if spp.get_data() is False:
         print("Failed to get data from remote server.")
         sys.exit(0)
@@ -84,9 +85,26 @@ def bm_system_prices(args):
 
 
 def bm_unitdata(args):
-    """ BMReport Unit Constraint Data """
+    """ BMReport Unit Constraint Data
+    The data can be filtered by date and or period using the --date and --period flags.
 
-    udd = UnitData()
+    :Example:
+    To obtain data for period 5, 1st Jan 2016
+
+    .. code-block:
+    $ pywind bm_unitdata --date 2016-01-01 --period 5
+
+    """
+
+    if args.date is not None:
+        udd = UnitData(date=args.date)
+    else:
+        udd = UnitData()
+        print("No date supplied, getting information for yesterday, {}.\n".format(udd.date))
+
+    if args.period is not None:
+        udd.period = args.period
+
     if udd.get_data() is False:
         print("Unable to get unit data.")
         sys.exit(0)
