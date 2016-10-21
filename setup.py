@@ -26,7 +26,7 @@ setup(
     packages=find_packages(exclude=['tests', 'sample_scripts']),
     install_requires=requires,
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Programming Language :: Python :: 2.7',
