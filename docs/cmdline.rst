@@ -108,3 +108,26 @@ To obtain the latest eROC auction data as an Excel spreadsheet,
     201607              41.65
   Output will be saved in erocprices.xlsx
   XLSX export to erocprices.xlsx completed
+
+Available Commands
+------------------
+
+Some commands allow additional filtering:
+
+ bm_unitdata
+   The data can be filtered by date and or period using the --date and --period flags.
+
+   Example
+
+     To obtain data for period 5, 1st Jan 2016
+
+     .. code::
+
+       $ pywind bm_unitdata --date 2016-01-01 --period 5
+
+       BMReport Unit Constraint Data
+       =============================
+
+       Data is for period 5, 2016-01-01
+       ...
+

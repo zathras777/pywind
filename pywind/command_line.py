@@ -34,6 +34,7 @@ import sys
 from pywind.bmreports.cmd import bm_generation_type, bm_system_prices, \
     bm_unitdata, bm_unitlist, power_pack_units
 from pywind.decc.cmd import decc_extract
+from pywind.elexon.cmd import elexon_b1320, elexon_b1420, elexon_b1330
 from pywind.log import setup_logging
 from pywind.ofgem.cmd import ofgem_certificate_search,\
     ofgem_station_search
@@ -52,7 +53,10 @@ COMMANDS = [
     ofgem_certificate_search,
     ofgem_station_search,
     power_pack_units,
-    roc_prices
+    roc_prices,
+    elexon_b1320,
+    elexon_b1330,
+    elexon_b1420
 ]
 COMMAND_NAMES = {}
 
