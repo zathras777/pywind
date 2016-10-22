@@ -27,16 +27,47 @@ class ElexonAPI(object):
 
         for item in xml.xpath('/response/responseBody/responseList/item'):
             item_dict = map_children_to_dict(item, self.XML_MAPPING)
-            if hasattr(self, 'post_item_cleanup'):
-                getattr(self, 'post_item_cleanup')(item_dict)
+            self.post_item_cleanup(item_dict)
             self.items.append(item_dict)
 
         return True
 
+    def post_item_cleanup(self, item):
+        return
+
 
 class B1320(ElexonAPI):
+    XML_MAPPING = [
+        'timeSeriesID',
+        'settlementDate',
+        'settlementPeriod',
+        'quantity',
+        'flowDirection',
+        'reasonCode',
+        'documentType',
+        'processType',
+        'resolution',
+        'curveType',
+        'activeFlag',
+        'documentID',
+        'documentRevNum'
+    ]
+
     def __init__(self, apikey):
         super(B1320, self).__init__(apikey, 'B1320')
+
+    def post_item_cleanup(self, item):
+        if 'activeflag' in item:
+            item['activeflag'] = item['activeflag'] == 'Y'
+        if 'quantity' in item:
+            item['quantity'] = float(item['quantity'])
+
+    def rows(self):
+        for item in self.items:
+            row = item.copy()
+            row['quantity'] = "{:10.4f}".format(item['quantity']).strip()
+            row['activeflag'] = str(item['activeflag'])
+            yield {'CongestionCounterTrade': row}
 
 
 class B1330(ElexonAPI):

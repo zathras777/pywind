@@ -1,8 +1,7 @@
 import requests
 
 from pywind.elexon.api import B1420, B1330, B1320
-from pywind.elexon.utils import make_elexon_url
-from pywind.utils import get_or_post_a_url, StdoutFormatter
+from pywind.utils import StdoutFormatter
 
 
 def elexon_b1320(args):
@@ -11,7 +10,7 @@ def elexon_b1320(args):
         print("You MUST supply an API key to access Elexon data")
         return None
 
-    print("To date this report has not returned usable data.")
+    print("This report has very sparse data.")
 
     api = B1320(args.apikey)
     if args.date is None:
@@ -28,6 +27,17 @@ def elexon_b1320(args):
     if api.get_data(**params) is False:
         print("No data returned")
         return None
+
+    fmt = StdoutFormatter("12s", "8s", "10.4f", "9s", "6s", "20s", "10s")
+    print("\n" + fmt.titles('Date', 'Period', 'Quantity', 'Direction', 'Active', 'Reason', 'Resolution'))
+    for item in api.items:
+        print(fmt.row(item['settlementdate'],
+                      item['settlementperiod'],
+                      item['quantity'],
+                      item['flowdirection'],
+                      str(item['activeflag']),
+                      item['reasoncode'],
+                      item['resolution']))
 
     return api
 
