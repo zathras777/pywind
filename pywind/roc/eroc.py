@@ -26,6 +26,7 @@
 # For more information, please refer to <http://unlicense.org/>
 
 from datetime import datetime
+from re import sub
 import html5lib
 import sys
 
@@ -117,7 +118,8 @@ class EROCPrices(object):
                 row_data = row.xpath('td')
                 if len(row_data) == 0 or row_data[0].text.strip() == '':
                     continue
-                dtt = datetime.strptime(row_data[0].text.strip(), "%d %B %Y").date()
+                str_good_date = sub('([0-9]*)[a-z]*( [A-z]* [0-9]*)',r'\1\2',row_data[0].text.strip())
+                dtt = datetime.strptime(str_good_date, "%d %B %Y").date()
                 auction_info = {'date': dtt,
                                 'average_price': _convert_type(row_data[1].text.strip()[1:], 'float'),
                                 'lowest_price': _convert_type(row_data[2].text.strip()[1:], 'float'),
