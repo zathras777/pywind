@@ -170,6 +170,9 @@ class CertificateSearch(object):
 
         :rtype: bool
         """
+        self.certificate_records = []
+        self.station_records = {}
+
         if not self.form.submit():
             return False
 
