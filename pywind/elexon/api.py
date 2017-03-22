@@ -1,3 +1,9 @@
+""" Information taken from the Elexon API User Guide.
+
+https://www.elexon.co.uk/wp-content/uploads/2016/10/Application-Programming-Interfaces-API-and-Data-Push-user-guide.pdf
+
+"""
+
 from pywind.elexon.utils import make_elexon_url, map_children_to_dict
 from pywind.utils import get_or_post_a_url, parse_response_as_xml
 
