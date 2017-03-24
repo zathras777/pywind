@@ -33,6 +33,14 @@ import sys
 from pywind.utils import get_or_post_a_url, _convert_type
 
 
+def parse_date_string(dtstr):
+    dtstr = dtstr.replace('Febraury', 'February')
+    try:
+        return datetime.strptime(dtstr, "%d %B %Y").date()
+    except ValueError:
+        return datetime.strptime(dtstr, "%d %b %Y").date()
+
+
 class EROCPrices(object):
     """
     The EROCPrices class provides access to the auction data from the eRIC website.
@@ -118,8 +126,8 @@ class EROCPrices(object):
                 row_data = row.xpath('td')
                 if len(row_data) == 0 or row_data[0].text.strip() == '':
                     continue
-                str_good_date = sub('([0-9]*)[a-z]*( [A-z]* [0-9]*)',r'\1\2',row_data[0].text.strip())
-                dtt = datetime.strptime(str_good_date, "%d %B %Y").date()
+                str_good_date = sub('([0-9]*)[a-z]*( [A-z]* [0-9]*)', r'\1\2', row_data[0].text.strip())
+                dtt = parse_date_string(str_good_date)
                 auction_info = {'date': dtt,
                                 'average_price': _convert_type(row_data[1].text.strip()[1:], 'float'),
                                 'lowest_price': _convert_type(row_data[2].text.strip()[1:], 'float'),

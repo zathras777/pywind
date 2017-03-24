@@ -3,6 +3,7 @@
 https://www.elexon.co.uk/wp-content/uploads/2016/10/Application-Programming-Interfaces-API-and-Data-Push-user-guide.pdf
 
 """
+from datetime import datetime
 
 from pywind.elexon.utils import make_elexon_url, map_children_to_dict
 from pywind.utils import get_or_post_a_url, parse_response_as_xml
@@ -26,6 +27,7 @@ class ElexonAPI(object):
         url = make_elexon_url(self.report, self.version)
         params.update({'APIKey': self.apikey, 'ServiceType': 'xml'})
         req = get_or_post_a_url(url, params=params)
+#        print(req.content)
         xml = parse_response_as_xml(req)
         http = xml.xpath('/response/responseMetadata/httpCode')
         if int(http[0].text) != 200:
@@ -145,3 +147,79 @@ class B1420(ElexonAPI):
             row['nominal'] = "{:10.1f}".format(item['nominal']).strip()
             row['activeflag'] = str(item['activeflag'])
             yield {'ConfigurationData': row}
+
+
+class DERSYSDATA(ElexonAPI):
+    XML_MAPPING = [
+        'recordType',
+        'settlementDate',
+        'settlementPeriod',
+        'systemSellPrice',
+        'systemBuyPrice',
+        'bSADDefault',
+        'priceDerivationCode',
+        'reserveScarcityPrice',
+        'indicativeNetImbalanceVolume',
+        'sellPriceAdjustment',
+        'buyPriceAdjustment',
+        'totalSystemAcceptedOfferVolume',
+        'totalSystemAcceptedBidVolume',
+        'totalSystemTaggedAcceptedOfferVolume',
+        'totalSystemTaggedAcceptedBidVolume',
+        'totalSystemAdjustmentSellVolume',
+        'totalSystemAdjustmentBuyVolume',
+        'totalSystemTaggedAdjustmentSellVolume',
+        'totalSystemTaggedAdjustmentBuyVolume',
+        'activeFlag'
+    ]
+
+    def __init__(self, apikey=None):
+        super(DERSYSDATA, self).__init__(apikey, 'DERSYSDATA')
+
+    def post_item_cleanup(self, item):
+        item['settlementdate'] = datetime.strptime(item['settlementdate'], "%Y-%m-%d").date()
+        item['activeflag'] = item['activeflag'] == 'Y'
+
+        for key in item.keys():
+            if key in ['recordtype', 'settlementdate', 'settlementperiod', 'pricederivationcode',
+                       'bsaddefault', 'activeflag'] or item[key] == 'NULL':
+                continue
+            item[key] = float(item[key])
+
+
+#class B1620(ElexonAPI):
+#    def __init__(self, apikey=None):
+#        super(B1620, self).__init__(apikey, 'B1620')
+
+
+class FUELINST(ElexonAPI):
+    XML_MAPPING = [
+        'recordType',
+        'startTimeOfHalfHrPeriod',
+        'settlementPeriod',
+        'publishingPeriodCommencingTime',
+        'ccgt',
+        'oil',
+        'coal',
+        'nuclear',
+        'wind',
+        'ps',
+        'npshyd',
+        'ocgt',
+        'other',
+        'intfr',
+        'intirl',
+        'intned',
+        'intew',
+        'activeFlag'
+    ]
+
+    def __init__(self, apikey=None):
+        super(FUELINST, self).__init__(apikey, 'FUELINST')
+
+    def post_item_cleanup(self, item):
+        if 'activeflag' in item:
+            item['activeflag'] = item['activeflag'] == 'Y'
+        dttm = datetime.strptime(item['publishingperiodcommencingtime'], "%Y-%m-%d %H:%M:%S")
+        item['date'] = dttm.date()
+        item['time'] = dttm.time()

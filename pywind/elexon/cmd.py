@@ -1,20 +1,78 @@
-import requests
+from datetime import timedelta, time, datetime, date
 
-from pywind.elexon.api import B1420, B1330, B1320
-from pywind.utils import StdoutFormatter
+from pywind.elexon.api import B1420, B1330, B1320, FUELINST, DERSYSDATA
+from pywind.utils import StdoutFormatter, args_get_datetime
+
+
+def check_api_key(args):
+    if args.apikey is None:
+        print("You MUST supply an API key to access Elexon data.")
+        print("Registration is free, but you need to go to the URL below and register.")
+        print("https://www.elexonportal.co.uk/registration/newuser")
+        return False
+    return True
+
+
+def get_check_data(api, params):
+    if not api.get_data(**params):
+        print("No data returned.")
+        return False
+    return True
+
+
+def elexon_generation_inst(args):
+    """ Generation Data at 5 minute intervals from the Elexon Data Portal """
+    if not check_api_key(args):
+        return None
+
+    api = FUELINST(args.apikey)
+    args_get_datetime(args)
+    params = {}
+    if args.fromdatetime is not None or args.todatetime is not None:
+        params['FromDateTime'] = args.fromdatetime if args.fromdatetime else args.todatetime - timedelta(days=1)
+        params['ToDateTime'] = args.todatetime if args.todatetime else args.fromdatetime + timedelta(days=1)
+    else:
+        print("Getting data for yesterday as no dates specified.")
+        params['FromDateTime'] = datetime.combine(date.today() - timedelta(days=2), time(23, 59))
+        params['ToDateTime'] = datetime.combine(date.today() - timedelta(days=1), time(23, 59))
+
+    if get_check_data(api, params) is False:
+        return None
+
+    fmt = StdoutFormatter("10s", "6s", "7s", "7s", "7s", "7s", "7s", "7s", "7s", "7s", "7s", "7s", "7s", "7s", "7s", "7s")
+    print("\n" + fmt.titles('Date', 'Time', 'Period', 'CCGT', 'Oil', 'Coal', 'Nuclear', 'Wind', 'PS', 'NPSHYD', 'OCGT',
+                            'Other', 'Int Fr', 'Int Irl', 'Int Ned', 'Int E/W'))
+    for item in api.items:
+        print(fmt.row(item['date'].strftime("%Y-%m-%d"),
+                      item['time'].strftime("%H:%M"),
+                      item['settlementperiod'],
+                      item['ccgt'],
+                      item['oil'],
+                      item['coal'],
+                      item['nuclear'],
+                      item['wind'],
+                      item['ps'],
+                      item['npshyd'],
+                      item['ocgt'],
+                      item['other'],
+                      item['intfr'],
+                      item['intirl'],
+                      item['intned'],
+                      item['intew'],
+                      ))
+    return api
 
 
 def elexon_b1320(args):
     """ Congestion Management Measures Countertrading """
-    if args.apikey is None:
-        print("You MUST supply an API key to access Elexon data")
+    if not check_api_key(args):
         return None
 
     print("This report has very sparse data.")
 
     api = B1320(args.apikey)
     if args.date is None:
-        print("You MUSt supply a date for this report.")
+        print("You MUST supply a date for this report.")
         return None
 
     if args.period is None:
@@ -93,5 +151,34 @@ def elexon_b1420(args):
                       str(item['activeflag']),
                       float(item['nominal']),
                       item.get('powersystemresourcetype', 'n/a')))
+
+    return api
+
+
+def elexon_sbp(args):
+    """ Derived System Prices from Elexon """
+    if not check_api_key(args):
+        return None
+
+    api = DERSYSDATA(args.apikey)
+
+    params = {
+        'FromSettlementDate': args.fromdate or date.today() - timedelta(days=1),
+        'ToSettlementDate': args.todate or args.fromdate or (date.today()) - timedelta(days=1)
+    }
+
+    if get_check_data(api, params) is False:
+        return None
+
+    fmt = StdoutFormatter("15s", "20s", "15.4f", "15.4f", "4s")
+    print("\nSystem adjustments are included in the figures shown below where '*' is shown.\n")
+    print("\n" + fmt.titles('Date', 'Settlement Period', 'Sell Price', 'Buy Price', 'Adj?'))
+    for item in api.items:
+        print(fmt.row(item['settlementdate'].strftime("%Y %b %d"),
+                      item['settlementperiod'],
+                      item['systemsellprice'] + item['sellpriceadjustment'],
+                      item['systembuyprice'] + item['buypriceadjustment'],
+                      "*" if item['sellpriceadjustment'] + item['buypriceadjustment'] > 0 else ''
+                      ))
 
     return api

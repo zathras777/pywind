@@ -104,7 +104,23 @@ def valid_date(dtstr):
     try:
         return datetime.strptime(dtstr, "%Y-%m-%d").date()
     except ValueError:
-        raise argparse.ArgumentTypeError("Not a valid date: '{0}'.".format(dtstr))
+        raise argparse.ArgumentTypeError("Not a valid date: '{0}'. Should be in format YYYY-MM-DD".format(dtstr))
+
+
+def valid_time(dtstr):
+    """ Parse a string into a date using the YYYY-MM-DD format. Used by the
+    :func:`commandline_parser` function.
+
+    :param dtstr: Date string to be parsed
+    :returns: Valid date
+    :rtype: :class:`datetime.date`
+    :raises: :exc:`argparse.ArgumentTypeError` if the date string is not formatted as
+             YYYY-MM-DD
+    """
+    try:
+        return datetime.strptime(dtstr, "%H:%M").time()
+    except ValueError:
+        raise argparse.ArgumentTypeError("Not a valid time: '{0}'. Should be in format HH:MM".format(dtstr))
 
 
 def commandline_parser(help_text, epilog=None):
@@ -124,6 +140,10 @@ def commandline_parser(help_text, epilog=None):
                         help='Enable debugging of requests')
     parser.add_argument('--log-filename', action='store', help='Filename to write logging to')
     parser.add_argument('--date', type=valid_date, help='Date. (yyyy-mm-dd format)')
+    parser.add_argument('--fromdate', type=valid_date, help='Date. (yyyy-mm-dd format)')
+    parser.add_argument('--todate', type=valid_date, help='Date. (yyyy-mm-dd format)')
+    parser.add_argument('--fromtime', type=valid_time, help='24 hour time. (HH:MM)')
+    parser.add_argument('--totime', type=valid_time, help='24 hour time. (HH:MM)')
     parser.add_argument('--year', type=int, help='Year (used for Elexon)')
     parser.add_argument('--month', type=int, help='Month (used for Elexon)')
     parser.add_argument('--period', type=int, help='Period (format is YYYYMM)')
@@ -138,6 +158,17 @@ def commandline_parser(help_text, epilog=None):
     parser.add_argument('--apikey', help='API Key (Elexon only)')
     parser.add_argument('-v', '--version', action='store_true', help='Show version number')
     return parser
+
+
+def args_get_datetime(args):
+    if args.fromdate and args.fromtime:
+        args.fromdatetime = datetime.combine(args.fromdate, args.fromtime)
+    else:
+        args.fromdatetime = None
+    if args.todate and args.totime:
+        args.todatetime = datetime.combine(args.todate, args.totime)
+    else:
+        args.todatetime = None
 
 
 def parse_response_as_xml(request):

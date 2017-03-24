@@ -105,13 +105,13 @@ class GenerationPeriod(object):
 
     def inst(self, elm):
         """ Store the time for an instant record.
-            :param el: the element to parse
+            :param elm: the element to parse
         """
         self.dtt = datetime.strptime(elm.get("AT"), self.DT1)
 
     def hh(self, elm):
         """ Store the start and finish times for a half hour record.
-            :param el: the element to parse
+            :param elm: the element to parse
         """
         ddd = elm.get("SD")
         hhh = elm.get("AT")
