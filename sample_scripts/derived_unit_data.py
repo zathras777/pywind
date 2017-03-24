@@ -58,16 +58,16 @@ def main():
         if ud.get_data():
             data[period] = ud.data
         else:
-            print "Unable to get data for %s, period %d" % (ud.date.strftime("%d %b %Y"), period)
+            print ("Unable to get data for %s, period %d" % (ud.date.strftime("%d %b %Y"), period))
 
     for period, units in sorted(data.iteritems()):
-        print "Period: ", period
+        print ("Period: ", period)
         for unit in sorted(units, key=lambda x: x['ngc']):
-            print "  ", unit['ngc'], unit['lead']
+            print ("  ", unit['ngc'], unit['lead'])
             if unit['bid'].has_key('volume'):
-                print "      BID:   ", unit['bid']['volume']+'MWh  ', unit['bid']['cashflow']
+                print ("      BID:   ", unit['bid']['volume']+'MWh  ', unit['bid']['cashflow'])
             if unit['offer'].has_key('volume'):
-                print "      OFFER: ", unit['offer']['volume']+'MWh  ', unit['offer']['cashflow']
+                print ("      OFFER: ", unit['offer']['volume']+'MWh  ', unit['offer']['cashflow'])
 
 
 if __name__ == '__main__':

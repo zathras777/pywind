@@ -32,17 +32,17 @@ def main():
     args = parser.parse_args()
 
     if args.technology is None:
-        print "You must specify at least one technology group"
+        print ("You must specify at least one technology group")
         sys.exit(0)
-    print "  Searching year ", args.year, "\n"
+    print ("  Searching year ", args.year, "\n")
     tids = []
     fn = "_".join(args.technology) + "_%d.csv" % args.year
-    print fn
+    print (fn)
     for t in args.technology:
         for poss in CertificateSearch.TECHNOLOGY_LIST:
             if t.lower() in poss.lower():
                 tids.append(CertificateSearch.TECHNOLOGY_LIST[poss])
-                print "  Filter will match technology ", poss
+                print ("  Filter will match technology ", poss)
 
     cs = CertificateSearch()
     cs.set_start_year(args.year)
@@ -51,9 +51,9 @@ def main():
     cs.set_finish_month(12)
     cs['scheme'] = 1
 
-    print "\n\nSearching for certificates..."
+    print ("\n\nSearching for certificates...")
     cs.get_data()
-    print "\n Complete.\n\nTotal of %d records to be filtered" % len(cs)
+    print ("\n Complete.\n\nTotal of %d records to be filtered" % len(cs))
     added = 0
 
     with open(fn, 'wb') as csvfile:
@@ -65,7 +65,7 @@ def main():
                 if t.lower() in c['technology'].lower():
                     spamwriter.writerow(c.as_list())
                     added += 1
-    print "Filtering complete. %d records saved as %s" % (added, fn)
+    print ("Filtering complete. %d records saved as %s" % (added, fn))
 
 
 if __name__ == '__main__':
