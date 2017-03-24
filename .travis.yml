@@ -14,6 +14,6 @@ script:
   - python setup.py test
   - pywind decc_extract
   - pywind ofgem_certificate_search --period 201601
-  - pywind bm_system_prices --export xml
+#  - pywind bm_system_prices --export xml
   - pywind roc_prices --export csv
 
