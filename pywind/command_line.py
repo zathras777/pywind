@@ -32,10 +32,9 @@ from __future__ import print_function
 import sys
 import os
 
-from pywind.bmreports.cmd import bm_generation_type, bm_system_prices, \
-    bm_unitdata, bm_unitlist, power_pack_units
 from pywind.decc.cmd import decc_extract
-from pywind.elexon.cmd import elexon_b1320, elexon_b1420, elexon_b1330, elexon_generation_inst, elexon_sbp
+from pywind.elexon.cmd import elexon_b1320, elexon_b1420, elexon_b1330, elexon_generation_inst, elexon_sbp, \
+    elexon_bm_data, elexon_bm_unit
 from pywind.log import setup_logging
 from pywind.ofgem.cmd import ofgem_certificate_search,\
     ofgem_station_search
@@ -46,19 +45,17 @@ from pywind import __version__
 
 
 COMMANDS = [
-#    bm_system_prices,
-#    bm_unitdata,
-#    bm_unitlist,
     decc_extract,
     ofgem_certificate_search,
     ofgem_station_search,
-    power_pack_units,
     roc_prices,
     elexon_generation_inst,
     elexon_b1320,
     elexon_b1330,
     elexon_b1420,
-    elexon_sbp
+    elexon_sbp,
+    elexon_bm_data,
+    elexon_bm_unit
 ]
 COMMAND_NAMES = {}
 

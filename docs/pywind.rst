@@ -11,5 +11,6 @@ Modules
     pywind_pywind
     pywind.bmreports
     pywind.decc
+    pywind.elexon
     pywind.ofgem
     pywind.roc

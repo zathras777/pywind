@@ -1,6 +1,6 @@
 from datetime import timedelta, time, datetime, date
 
-from pywind.elexon.api import B1420, B1330, B1320, FUELINST, DERSYSDATA
+from pywind.elexon.api import B1420, B1330, B1320, FUELINST, DERSYSDATA, DERBMDATA, BMUNITSEARCH
 from pywind.utils import StdoutFormatter, args_get_datetime
 
 
@@ -68,7 +68,7 @@ def elexon_b1320(args):
     if not check_api_key(args):
         return None
 
-    print("This report has very sparse data.")
+    print("This report has *VERY* sparse data.")
 
     api = B1320(args.apikey)
     if args.date is None:
@@ -82,8 +82,7 @@ def elexon_b1320(args):
     params = {'SettlementDate': args.date,
               'Period': args.period}
 
-    if api.get_data(**params) is False:
-        print("No data returned")
+    if get_check_data(api, params) is False:
         return None
 
     fmt = StdoutFormatter("12s", "8s", "10.4f", "9s", "6s", "20s", "10s")
@@ -120,8 +119,8 @@ def elexon_b1330(args):
     api = B1330(args.apikey)
     params = {'Year': args.year or 2016,
               'Month': MONTHS[args.month - 1 or 8]}
-    if not api.get_data(**params):
-        print("No data returned.")
+
+    if get_check_data(api, params) is False:
         return None
 
     fmt = StdoutFormatter("4d", "5s", "40s", "8s")
@@ -133,8 +132,7 @@ def elexon_b1330(args):
 
 def elexon_b1420(args):
     """ Installed Generation Capacity per Unit """
-    if args.apikey is None:
-        print("You MUST supply an API key to access Elexon data")
+    if not check_api_key(args):
         return None
 
     api = B1420(args.apikey)
@@ -180,5 +178,49 @@ def elexon_sbp(args):
                       item['systembuyprice'] + item['buypriceadjustment'],
                       "*" if item['sellpriceadjustment'] + item['buypriceadjustment'] > 0 else ''
                       ))
+
+    return api
+
+
+def elexon_bm_data(args):
+    """ Derived System Prices from Elexon """
+    if not check_api_key(args):
+        return None
+
+    api = DERBMDATA(args.apikey)
+
+    params = {
+        'SettlementDate': args.date or date.today() - timedelta(days=1),
+        'SettlementPeriod': args.period or 1
+    }
+
+    if not get_check_data(api, params):
+        return None
+
+    return api
+
+
+def elexon_bm_unit(args):
+    """ Derived System Prices from Elexon """
+    if not check_api_key(args):
+        return None
+
+    api = BMUNITSEARCH(args.apikey)
+    params = {
+        'BMUnitType': args.unit_type or '*'
+    }
+    if not get_check_data(api, params):
+        return None
+
+    print("Total of {} units\n".format(len(api.items)))
+
+    fmt = StdoutFormatter('12s', '12s', '^8s', '30s', '50s')
+    print("\n" + fmt.titles('NGC ID', 'BM ID', 'Active ?', 'BM Type', 'Lead Party Name'))
+    for item in sorted(api.items, key=lambda x: x['ngcbmunitname']):
+        print(fmt.row(item['ngcbmunitname'],
+                      item['bmunitid'],
+                      'Y' if item['activeflag'] else 'N',
+                      "{}, {}".format(item['bmunittype'], item['category']),
+                      item['leadpartyname']))
 
     return api

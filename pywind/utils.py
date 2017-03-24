@@ -144,6 +144,7 @@ def commandline_parser(help_text, epilog=None):
     parser.add_argument('--todate', type=valid_date, help='Date. (yyyy-mm-dd format)')
     parser.add_argument('--fromtime', type=valid_time, help='24 hour time. (HH:MM)')
     parser.add_argument('--totime', type=valid_time, help='24 hour time. (HH:MM)')
+    parser.add_argument('--unit-type', help='Elexon Unit Type (only one type can be given)')
     parser.add_argument('--year', type=int, help='Year (used for Elexon)')
     parser.add_argument('--month', type=int, help='Month (used for Elexon)')
     parser.add_argument('--period', type=int, help='Period (format is YYYYMM)')
@@ -231,6 +232,8 @@ def map_xml_to_dict(xml_node, mapping):
     :rtype: dict
     """
     rv_dict = {}
+    print(xml_node.keys())
+
     for mapp in mapping:
         val = xml_node.get(mapp[0], None)
         key = mapp[1] if len(mapp) > 1 and mapp[1] != '' else mapp[0].lower()
