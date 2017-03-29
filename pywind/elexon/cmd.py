@@ -1,6 +1,7 @@
 from datetime import timedelta, time, datetime, date
 
 from pywind.elexon.api import B1420, B1330, B1320, FUELINST, DERSYSDATA, DERBMDATA, BMUNITSEARCH
+from pywind.elexon.unit import BalancingData
 from pywind.utils import StdoutFormatter, args_get_datetime
 
 
@@ -164,11 +165,15 @@ def elexon_sbp(args):
         'FromSettlementDate': args.fromdate or date.today() - timedelta(days=1),
         'ToSettlementDate': args.todate or args.fromdate or (date.today()) - timedelta(days=1)
     }
+    if args.period is not None:
+        params['SettlementPeriod'] = args.period
+    if args.all_periods:
+        params['SettlementPeriod'] = '*'
 
     if get_check_data(api, params) is False:
         return None
 
-    fmt = StdoutFormatter("15s", "20s", "15.4f", "15.4f", "4s")
+    fmt = StdoutFormatter("15s", "^20d", "15.4f", "15.4f", "4s")
     print("\nSystem adjustments are included in the figures shown below where '*' is shown.\n")
     print("\n" + fmt.titles('Date', 'Settlement Period', 'Sell Price', 'Buy Price', 'Adj?'))
     for item in api.items:
@@ -187,21 +192,38 @@ def elexon_bm_data(args):
     if not check_api_key(args):
         return None
 
-    api = DERBMDATA(args.apikey)
-
+    bd = BalancingData(args.apikey)
     params = {
         'SettlementDate': args.date or date.today() - timedelta(days=1),
         'SettlementPeriod': args.period or 1
     }
+    if args.all_periods:
+        params['SettlementPeriod'] = '*'
 
-    if not get_check_data(api, params):
+    if not bd.get_data(**params):
         return None
 
-    return api
+    fmt = StdoutFormatter('12s', '^7d', '16.4f', '16.4f', '18.4f', '18.4f', '12.4f', '12.4f')
+    print("\n" + fmt.titles('Unit Name', 'Period', 'Bid Volume', 'Offer Volume',
+                            'Bid Cashflow', 'Offer Cashflow', 'Bid Rate', 'Offer Rate'))
+    for unit_name in sorted(bd.units):
+        unit = bd.units[unit_name]
+        for period in sorted(unit.periods):
+            pd = unit.periods[period]
+            print(fmt.row(unit.unit,
+                          period,
+                          pd.bid_volume,
+                          pd.offer_volume,
+                          pd.bid_cashflow,
+                          pd.offer_cashflow,
+                          pd.bid_rate,
+                          pd.offer_rate))
+
+    return bd.api
 
 
 def elexon_bm_unit(args):
-    """ Derived System Prices from Elexon """
+    """ Balancing Mechanism Unit information from Elexon """
     if not check_api_key(args):
         return None
 
@@ -209,6 +231,7 @@ def elexon_bm_unit(args):
     params = {
         'BMUnitType': args.unit_type or '*'
     }
+
     if not get_check_data(api, params):
         return None
 

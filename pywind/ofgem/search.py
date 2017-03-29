@@ -100,7 +100,7 @@ class CertificateSearch(object):
         """
         if not isinstance(yearmonth, int):
             yearmonth = int(yearmonth)
-        year = yearmonth / 100
+        year = int(yearmonth / 100)
         if self._set_year(year) is False:
             return False
         return self._set_month(yearmonth % year)

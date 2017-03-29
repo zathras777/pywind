@@ -44,7 +44,9 @@ def element_attributes(elm):
     return {'tag': elm.tag,
             'type': elm.get('type'),
             'name': elm.get('name'),
-            'value': elm.get('value', '')}
+            'value': elm.get('value', ''),
+            'readonly': elm.get('readonly', False),
+            'disabled': elm.get('disabled', False)}
 
 
 def selected_list(element):
@@ -172,6 +174,7 @@ class FormData(object):
             if 'cbNull' in name and element['checked'] is False:
                 continue
             post_data[name] = self._get_post_value(name, element)
+#        pprint(post_data)
         if quoted:
             return {quote(key): quote(post_data[key]) for key in sorted(post_data.keys())}
         return post_data
@@ -211,7 +214,6 @@ class FormData(object):
 
     def _set_value_by_name(self, name, value):
         element = self.elements[name]
-
         if element['tag'] == 'select':
             sel = None
             if isinstance(value, int):
@@ -234,6 +236,9 @@ class FormData(object):
             return True, self._postback_needed(name)
         elif 'value' in element:
             element['value'] = value
+
+            self._check_set_dropdown(name, value)
+
             if 'checkbox' in element and element['checkbox']:
                 ckbox = self.elements[name.replace('txtValue', 'cbNull')]
                 ckbox['checked'] = False
@@ -243,6 +248,28 @@ class FormData(object):
             return True, self._postback_needed(name)
 
         return False, False
+
+    def _check_set_dropdown(self, name, value):
+        dd = name.replace('txtValue', 'divDropDown$ctl00')
+        if dd not in self.elements:
+            return
+        options = []
+        idxs = []
+        idx_el = None
+        for poss in self.elements:
+            if dd[:-2] in poss:
+                options.append(poss)
+                if 'HiddenIndices' in poss:
+                    idx_el = poss
+        if idx_el is None:
+            return
+        options = sorted(options)
+        for n in range(len(options) - 2):
+            poss_el = self.elements.get(options[n + 2])
+            if poss_el['label'] == value:
+                idxs.append(str(n))
+        self.elements[idx_el]['value'] = ",".join(idxs)
+        return True
 
     def _postback_needed(self, name):
         """ If a postback is needed, set things up and return True. """
@@ -458,9 +485,11 @@ class FormData(object):
             choices to build the required text. This could be a select element or one of the
             more complex multiple choice checkbox fields.
         """
+#        print("_get_related_txt_element - {}".format(name))
         for poss in ['ddValue', 'cbNull', 'divDropDown$ctl01$HiddenIndices']:
             related = name.replace('txtValue', poss)
             rel_el = self.elements.get(related, None)
+#            print("    {} => {}".format(related, rel_el))
             if rel_el is not None:
                 return rel_el
         return None
@@ -478,8 +507,11 @@ class FormData(object):
             num_idx = int(idx) + 2
             val_name = element['name'].replace('01$HiddenIndices', "{:02d}".format(num_idx))
             elem = self.elements.get(val_name, None)
+#            print("      {}".format(elem))
             if elem is None:
                 self.logger.info("Unable to find a text value for %s -> %s", idx, val_name)
                 continue
             components.append(elem.get('label', 'unknown'))
+#        print("        {}".format(components))
         return sep.join(components)
+

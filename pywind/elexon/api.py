@@ -5,8 +5,11 @@ https://www.elexon.co.uk/wp-content/uploads/2016/10/Application-Programming-Inte
 """
 from datetime import datetime
 
-from pywind.elexon.utils import make_elexon_url, map_children_to_dict
-from pywind.utils import get_or_post_a_url, parse_response_as_xml
+from pywind.utils import get_or_post_a_url, parse_response_as_xml, map_xml_to_dict
+
+
+def make_elexon_url(report, version):
+    return "https://api.bmreports.com/BMRS/{}/{}".format(report.upper(), version)
 
 
 class ElexonAPI(object):
@@ -20,7 +23,15 @@ class ElexonAPI(object):
         self.items = []
         self.multi = {}
 
+    def __len__(self):
+        """ Returns the number of items available. """
+        return len(self.items)
+
     def get_data(self, **params):
+        """ Get data from the Elexon servers and attempt to parse it into a series of
+            dicts each representing a record. Parameters are passed as a dict.
+            Multiple sets of data are created in the multi member, single sets in items.
+        """
         if self.report is None:
             raise Exception("ElexonAPI objects require the report be set before use.")
         if self.apikey is None:
@@ -29,7 +40,7 @@ class ElexonAPI(object):
         url = make_elexon_url(self.report, self.version)
         params.update({'APIKey': self.apikey, 'ServiceType': 'xml'})
         req = get_or_post_a_url(url, params=params)
-        print(req.content)
+#        print(req.content)
         xml = parse_response_as_xml(req)
         http = xml.xpath('/response/responseMetadata/httpCode')
         if int(http[0].text) != 200:
@@ -37,19 +48,24 @@ class ElexonAPI(object):
 
         if self.MULTI_RESULTS is None:
             for item in xml.xpath('/response/responseBody/responseList/item'):
-                item_dict = map_children_to_dict(item, self.XML_MAPPING)
-                print(item_dict)
-                if 'activeFlags' in item_dict:
+                item_dict = map_xml_to_dict(item, self.XML_MAPPING)
+
+                if 'activeflag' in item_dict:
                    item_dict['activeflag'] = item_dict['activeflag'] == 'Y'
+                if 'settlementperiod' in item_dict:
+                    item_dict['settlementperiod'] = int(item_dict['settlementperiod'])
+
                 self.post_item_cleanup(item_dict)
                 self.items.append(item_dict)
         else:
             for result_set in self.MULTI_RESULTS:
                 self.multi[result_set[0]] = []
                 for item in xml.xpath(result_set[1]):
-                    item_dict = map_children_to_dict(item, self.XML_MAPPING)
+                    item_dict = map_xml_to_dict(item, self.XML_MAPPING)
                     if 'activeFlags' in item_dict:
                        item_dict['activeflag'] = item_dict['activeflag'] == 'Y'
+                    if 'settlementperiod' in item_dict:
+                        item_dict['settlementperiod'] = int(item_dict['settlementperiod'])
 
                     self.post_item_cleanup(item_dict)
 #                    print(item_dict)
@@ -58,6 +74,9 @@ class ElexonAPI(object):
         return True
 
     def post_item_cleanup(self, item):
+        """ Holder for a subclassed function to transform the members of the basic dict 
+            into something more useful.
+        """
         return
 
 
@@ -167,29 +186,7 @@ class B1420(ElexonAPI):
 
 
 class DERSYSDATA(ElexonAPI):
-    XML_MAPPING = [
-        'recordType',
-        'settlementDate',
-        'settlementPeriod',
-        'systemSellPrice',
-        'systemBuyPrice',
-        'bSADDefault',
-        'priceDerivationCode',
-        'reserveScarcityPrice',
-        'indicativeNetImbalanceVolume',
-        'sellPriceAdjustment',
-        'buyPriceAdjustment',
-        'totalSystemAcceptedOfferVolume',
-        'totalSystemAcceptedBidVolume',
-        'totalSystemTaggedAcceptedOfferVolume',
-        'totalSystemTaggedAcceptedBidVolume',
-        'totalSystemAdjustmentSellVolume',
-        'totalSystemAdjustmentBuyVolume',
-        'totalSystemTaggedAdjustmentSellVolume',
-        'totalSystemTaggedAdjustmentBuyVolume',
-        'activeFlag'
-    ]
-
+    """ Derived System Data """
     def __init__(self, apikey=None):
         super(DERSYSDATA, self).__init__(apikey, 'DERSYSDATA')
 
@@ -204,12 +201,8 @@ class DERSYSDATA(ElexonAPI):
             item[key] = float(item[key])
 
 
-#class B1620(ElexonAPI):
-#    def __init__(self, apikey=None):
-#        super(B1620, self).__init__(apikey, 'B1620')
-
-
 class FUELINST(ElexonAPI):
+    """ Instant Generation by Fuel Type """
     XML_MAPPING = [
         'recordType',
         'startTimeOfHalfHrPeriod',
@@ -235,55 +228,18 @@ class FUELINST(ElexonAPI):
         super(FUELINST, self).__init__(apikey, 'FUELINST')
 
     def post_item_cleanup(self, item):
-        if 'activeflag' in item:
-            item['activeflag'] = item['activeflag'] == 'Y'
         dttm = datetime.strptime(item['publishingperiodcommencingtime'], "%Y-%m-%d %H:%M:%S")
         item['date'] = dttm.date()
         item['time'] = dttm.time()
 
 
 class DERBMDATA(ElexonAPI):
-    XML_MAPPING = [
-        'recordType',
-        'settlementDate',
-        'settlementPeriod',
-        'bmUnitID',
-        'bmUnitType',
-        'leadPartyName',
-        'ngcBMUnitName',
-        'acceptanceID',
-        'shortAcceptanceFlag',
-        'volumeAcceptedforBidOfferPair-1',
-        'volumeAcceptedforBidOfferPair-2',
-        'volumeAcceptedforBidOfferPair-3',
-        'volumeAcceptedforBidOfferPair-4',
-        'volumeAcceptedforBidOfferPair-5',
-        'volumeAcceptedforBidOfferPair-6',
-        'volumeAcceptedforBidOfferPair1',
-        'volumeAcceptedforBidOfferPair2',
-        'volumeAcceptedforBidOfferPair3',
-        'volumeAcceptedforBidOfferPair4',
-        'volumeAcceptedforBidOfferPair5',
-        'volumeAcceptedforBidOfferPair6',
-        'cashflowAcceptedforBidOfferPair-1',
-        'cashflowAcceptedforBidOfferPair-2',
-        'cashflowAcceptedforBidOfferPair-3',
-        'cashflowAcceptedforBidOfferPair-4',
-        'cashflowAcceptedforBidOfferPair-5',
-        'cashflowAcceptedforBidOfferPair-6',
-        'cashflowAcceptedforBidOfferPair1',
-        'cashflowAcceptedforBidOfferPair2',
-        'cashflowAcceptedforBidOfferPair3',
-        'cashflowAcceptedforBidOfferPair4',
-        'cashflowAcceptedforBidOfferPair5',
-        'cashflowAcceptedforBidOfferPair6',
-        'total',
-        'activeFlag'
-    ]
-
+    """ Derived Balancing Mechanism Data """
     MULTI_RESULTS = (
         ('bav', '/response/responseBody/bav/responseList/item'),
+        ('oav', '/response/responseBody/oav/responseList/item'),
         ('ipbav', '/response/responseBody/ipbav/responseList/item'),
+        ('ipoav', '/response/responseBody/ipoav/responseList/item'),
         ('ipbc', '/response/responseBody/ipbc/responseList/item'),
         ('ipoc', '/response/responseBody/ipoc/responseList/item'),
     )
@@ -292,10 +248,14 @@ class DERBMDATA(ElexonAPI):
         super(DERBMDATA, self).__init__(apikey, 'DERBMDATA')
 
     def post_item_cleanup(self, item):
-        item['activeflag'] = item['activeflag'] == 'Y'
+        item['settlementperiod'] = int(item['settlementperiod'])
+        for key in item:
+            if 'volume' in key or 'cashflow' in key or 'total' in key:
+                item[key] = float(item[key])
 
 
 class BMUNITSEARCH(ElexonAPI):
+    """ Balancing Mechanism Unit Search """
     XML_MAPPING = [
         'recordType',
         'bmUnitID',
@@ -320,5 +280,4 @@ class BMUNITSEARCH(ElexonAPI):
         super(BMUNITSEARCH, self).__init__(apikey, 'BMUNITSEARCH')
 
     def post_item_cleanup(self, item):
-        item['activeflag'] = item['activeflag'] == 'Y'
         item['category'] = self.CATEGORIES[item['bmunittype']]

@@ -68,7 +68,7 @@ class Certificates(OfgemObjectBase):
             ('textbox4', 'generator_id'),
             ('textbox13', 'name'),
             ('textbox5', 'scheme'),
-            ('textbox19', 'capacity', 'float', 0),
+            ('textbox19', 'capacity', 'float', 0.0),
             ('textbox12', 'country'),
             ('textbox15', 'technology'),
             ('textbox31', 'generation_type'),
@@ -76,7 +76,7 @@ class Certificates(OfgemObjectBase):
             ('textbox21', 'certs', 'int', 0),
             ('textbox24', 'start_no'),
             ('textbox27', 'finish_no'),
-            ('textbox37', 'factor', 'float', 0),
+            ('textbox37', 'factor', 'float', 0.0),
             ('textbox30', 'issue_dt', 'date'),
             ('textbox33', 'status'),
             ('textbox36', 'status_dt', 'date'),
@@ -87,8 +87,8 @@ class Certificates(OfgemObjectBase):
     def __init__(self, node):
         OfgemObjectBase.__init__(self, node)
 
-        if self.attrs['period'].startswith(b"01"):
-            dt = datetime.strptime(self.attrs['period'][:10].decode(), '%d/%m/%Y')
+        if self.attrs['period'].startswith("01"):
+            dt = datetime.strptime(self.attrs['period'][:10], '%d/%m/%Y')
             self.attrs['period'] = dt.strftime("%b-%Y")
 
     def __str__(self):

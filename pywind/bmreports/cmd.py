@@ -30,7 +30,6 @@ import sys
 from pprint import pprint
 
 from pywind.bmreports.generation_type import GenerationData
-from pywind.bmreports.prices import SystemPrices
 from pywind.bmreports.unit import UnitData, UnitList, PowerPackUnits
 from pywind.utils import multi_level_get, StdoutFormatter
 
@@ -62,26 +61,6 @@ def bm_generation_type(args):
                               typ['value'], typ['percent']))
         print("\n")
     return gdd
-
-
-def bm_system_prices(args):
-    """ BMReport System Price Data """
-    if args.date is not None:
-        spp = SystemPrices(dtt=args.date)
-    else:
-        spp = SystemPrices()
-        print("\nNo date specified, using today.\n")
-
-    if spp.get_data() is False:
-        print("Failed to get data from remote server.")
-        sys.exit(0)
-    print("Date: {}".format(spp.dtt))
-    fmt = StdoutFormatter('6s', '>10s', '>10s')
-    print(fmt.titles("Period", 'SBP', 'SSP'))
-    for prc in spp.prices:
-        print(fmt.row(str(prc['period']), prc['sbp'], prc['ssp']))
-
-    return spp
 
 
 def bm_unitdata(args):
@@ -124,33 +103,6 @@ def bm_unitdata(args):
                       bmu.rate("bid"),
                       bmu.rate("offer")))
     return udd
-
-
-def bm_unitlist(args):
-    """ BMReport Unit List """
-
-    ulist = UnitList()
-    if ulist.get_list() is False:
-        print("There was an error getting the list from the BMReports website")
-        sys.exit(0)
-
-    print("Total of {} units\n".format(len(ulist)))
-
-    fmt = StdoutFormatter('12s', '12s', '10s', '12s', '12s')
-    print(fmt.titles('NGC ID', 'Sett Id', 'Fuel Type',
-                     'Eff. From', 'Eff. To'))
-    for unit in ulist.units:
-        vals = [unit['ngc_id'],
-                unit.get('sett_id', ''),
-                unit['fuel_type'],
-                unit['eff_from'].strftime("%d %b %Y")]
-        if unit['eff_to'] is not None:
-            vals.append(unit['eff_to'].strftime("%d %b %Y"))
-        else:
-            vals.append('n/a')
-        print(fmt.row(*vals))
-
-    return ulist
 
 
 def power_pack_units(args):
