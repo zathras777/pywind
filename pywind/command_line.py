@@ -34,7 +34,7 @@ import os
 
 from pywind.decc.cmd import decc_extract
 from pywind.elexon.cmd import elexon_b1320, elexon_b1420, elexon_b1330, elexon_generation_inst, elexon_sbp, \
-    elexon_bm_data, elexon_bm_unit
+    elexon_bm_data, elexon_bm_unit, elexon_b1610, elexon_b1630
 from pywind.log import setup_logging
 from pywind.ofgem.cmd import ofgem_certificate_search,\
     ofgem_station_search
@@ -53,6 +53,8 @@ COMMANDS = [
     elexon_b1320,
     elexon_b1330,
     elexon_b1420,
+    elexon_b1610,
+    elexon_b1630,
     elexon_sbp,
     elexon_bm_data,
     elexon_bm_unit

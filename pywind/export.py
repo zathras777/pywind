@@ -124,7 +124,9 @@ def _order(info):
     """ Create the order and titles for CSV export from an information dict. """
     rv_list = [(0, 'Record Type')]
     for key in info.keys():
-        title = " ".join([part.title() for part in key[1:].split('_')])
+        if key.startswith('@'):
+            key = key[1:]
+        title = " ".join([part.title() for part in key.split('_')])
         rv_list.append((key, title))
     return rv_list
 

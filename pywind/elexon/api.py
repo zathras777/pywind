@@ -173,14 +173,77 @@ class B1420(ElexonAPI):
             item['nominal'] = float(item['nominal'])
         if 'powersystemresourcetype' in item:
             item['powersystemresourcetype'] = item['powersystemresourcetype'].replace('\"', '')
-        if 'activeflag' in item:
-            item['activeflag'] = item['activeflag'] == 'Y'
+#        if 'activeflag' in item:
+#            item['activeflag'] = item['activeflag'] == 'Y'
 
     def rows(self):
         for item in self.items:
             row = item.copy()
             row['year'] = str(item['year'])
             row['nominal'] = "{:10.1f}".format(item['nominal']).strip()
+            row['activeflag'] = str(item['activeflag'])
+            yield {'ConfigurationData': row}
+
+
+class B1610(ElexonAPI):
+    XML_MAPPING = [
+        'documentType',
+        'businessType',
+        'processType',
+        'timeSeriesID',
+        'quantity',
+        'curveType',
+        'resolution',
+        'settlementDate',
+        'settlementPeriod',
+        'powerSystemResourceType',
+        'registeredResourceEICCode',
+        'marketGenerationUnitEICCode',
+        'marketGenerationBMUId',
+        'marketGenerationNGCBMUId',
+        'bMUnitID',
+        'nGCBMUnitID',
+        'activeFlag',
+        'documentID',
+        'documentRevNum'
+    ]
+
+    def __init__(self, apikey):
+        super(B1610, self).__init__(apikey, 'B1610')
+
+    def rows(self):
+        for item in self.items:
+            row = item.copy()
+            row['activeflag'] = str(item['activeflag'])
+            yield {'ConfigurationData': row}
+
+
+class B1630(ElexonAPI):
+    XML_MAPPING = [
+        'documentType',
+        'businessType',
+        'processType',
+        'timeSeriesID',
+        'quantity',
+        'curveType',
+        'resolution',
+        'settlementDate',
+        'settlementPeriod',
+        'PSRType',
+        'powerSystemResourceType',
+        'registeredResourceEICCode',
+        'marketGenerationUnitEICCode',
+        'activeFlag',
+        'documentID',
+        'documentRevNum'
+    ]
+
+    def __init__(self, apikey):
+        super(B1630, self).__init__(apikey, 'B1630')
+
+    def rows(self):
+        for item in self.items:
+            row = item.copy()
             row['activeflag'] = str(item['activeflag'])
             yield {'ConfigurationData': row}
 

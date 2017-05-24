@@ -149,6 +149,7 @@ def commandline_parser(help_text, epilog=None):
     parser.add_argument('--month', type=int, help='Month (used for Elexon)')
     parser.add_argument('--period', type=int, help='Period (format is YYYYMM)')
     parser.add_argument('--all-periods', action='store_true', help='Get data for all available periods')
+    parser.add_argument('--settlement-period', help='Settlement period (1-50)')
     parser.add_argument('--scheme', choices=['REGO', 'RO'], help='Ofgem Scheme')
     parser.add_argument('--export', choices=['csv', 'xml', 'xlsx'], help='Data Export Format')
     parser.add_argument('--output', help='Export filename')
@@ -157,7 +158,7 @@ def commandline_parser(help_text, epilog=None):
                         help='Save downloaded file in original format')
     parser.add_argument('--original', help='Filename for original format file (use with --save)')
     parser.add_argument('--station', help='Station name to filter for (Ofgem only)')
-    parser.add_argument('--apikey', help='API Key (Elexon only)')
+    parser.add_argument('--apikey', default='elexon.api.key', help='API Key (Elexon only)')
     parser.add_argument('-v', '--version', action='store_true', help='Show version number')
     return parser
 

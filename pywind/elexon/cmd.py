@@ -1,6 +1,6 @@
 from datetime import timedelta, time, datetime, date
 
-from pywind.elexon.api import B1420, B1330, B1320, FUELINST, DERSYSDATA, DERBMDATA, BMUNITSEARCH
+from pywind.elexon.api import B1420, B1330, B1320, FUELINST, DERSYSDATA, DERBMDATA, BMUNITSEARCH, B1610, B1630
 from pywind.elexon.unit import BalancingData
 from pywind.utils import StdoutFormatter, args_get_datetime
 
@@ -150,6 +150,65 @@ def elexon_b1420(args):
                       str(item['activeflag']),
                       float(item['nominal']),
                       item.get('powersystemresourcetype', 'n/a')))
+
+    return api
+
+
+def elexon_b1610(args):
+    """ Generated output by generator """
+    if not check_api_key(args):
+        return None
+
+    api = B1610(args.apikey)
+    if args.settlement_period is None:
+        print("A settlement period should be supplied using the --settlement-period flag (range 1 to 50)."
+              "Defaulting to 1")
+    if args.date is None:
+        print("A date should be supplied using the --date flag. Format is YYYY-MM-DD. Defaulting to today")
+    if not api.get_data(**{'SettlementDate': args.date or date.today().strftime("%Y-%m-%d"),
+                           'Period': args.settlement_period or 1}):
+        print("No data returned.")
+        return None
+
+    fmt = StdoutFormatter("8s", "10s", "6s", "6s", "10.1f", "20s", "30s")
+    print("\n" + fmt.titles('NGC Unit', 'Date', 'Period', 'Active', 'Output', 'Type', 'Reference'))
+    for item in sorted(api.items, key=lambda xxx: xxx['ngcbmunitid']):
+        print(fmt.row(item['ngcbmunitid'],
+                      item['settlementdate'],
+                      str(item['settlementperiod']),
+                      str(item['activeflag']),
+                      float(item['quantity']),
+                      item.get('powersystemresourcetype', 'n/a'),
+                      item['documentid'] + " - " + item['documentrevnum']))
+
+    return api
+
+
+def elexon_b1630(args):
+    """ Actual or forecast Wind & Solar Generation """
+    if not check_api_key(args):
+        return None
+
+    api = B1630(args.apikey)
+    if args.settlement_period is None:
+        print("A settlement period should be supplied using the --settlement-period flag (range 1 to 50)."
+              "Defaulting to 1")
+    if args.date is None:
+        print("A date should be supplied using the --date flag. Format is YYYY-MM-DD. Defaulting to today")
+    if not api.get_data(**{'SettlementDate': args.date or date.today().strftime("%Y-%m-%d"),
+                           'Period': args.settlement_period or 1}):
+        print("No data returned.")
+        return None
+
+    fmt = StdoutFormatter("10s", "6s", "6s", "10.1f", "20s", "30s")
+    print("\n" + fmt.titles('Date', 'Period', 'Active', 'Output', 'Type', 'Reference'))
+    for item in sorted(api.items, key=lambda xxx: xxx['documentid']):
+        print(fmt.row(item['settlementdate'],
+                      str(item['settlementperiod']),
+                      str(item['activeflag']),
+                      float(item['quantity']),
+                      item.get('powersystemresourcetype', 'n/a'),
+                      item['documentid'] + " - " + item['documentrevnum']))
 
     return api
 
