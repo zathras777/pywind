@@ -43,7 +43,14 @@ class ElexonAPI(object):
 #        print(req.content)
         xml = parse_response_as_xml(req)
         http = xml.xpath('/response/responseMetadata/httpCode')
-        if int(http[0].text) != 200:
+        response_code = int(http[0].text)
+        if response_code == 204:
+            print("No content returned, but no error reported.")
+            return True
+        elif response_code != 200:
+            print("No data returned. Error reported.")
+            err = xml.xpath('/response/responseMetadata/description')
+            print(err[0].text)
             return False
 
         if self.MULTI_RESULTS is None:
@@ -186,30 +193,11 @@ class B1420(ElexonAPI):
 
 
 class B1610(ElexonAPI):
-    XML_MAPPING = [
-        'documentType',
-        'businessType',
-        'processType',
-        'timeSeriesID',
-        'quantity',
-        'curveType',
-        'resolution',
-        'settlementDate',
-        'settlementPeriod',
-        'powerSystemResourceType',
-        'registeredResourceEICCode',
-        'marketGenerationUnitEICCode',
-        'marketGenerationBMUId',
-        'marketGenerationNGCBMUId',
-        'bMUnitID',
-        'nGCBMUnitID',
-        'activeFlag',
-        'documentID',
-        'documentRevNum'
-    ]
-
     def __init__(self, apikey):
         super(B1610, self).__init__(apikey, 'B1610')
+
+    def post_item_cleanup(self, item):
+        item['quantity'] = float(item['quantity'])
 
     def rows(self):
         for item in self.items:

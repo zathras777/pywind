@@ -49,7 +49,7 @@ def export_to_file(args, obj):
     """
     fmt = (args.export or 'xml').lower()
     if fmt.lower() not in ['xml', 'csv', 'xlsx']:
-        print("Format must be xml or csv, not {}".format(fmt))
+        print("Format must be xml, xlsx or csv, not {}".format(fmt))
         sys.exit(0)
     if args.output is None:
         fnn = obj.__class__.__name__
