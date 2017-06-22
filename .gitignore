@@ -39,4 +39,5 @@ nosetests.xml
 *~
 ofgem.html
 docs/_build
+elexon.api.key
 

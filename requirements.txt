@@ -1,6 +1,7 @@
 lxml
 xlrd
 xlwt
+xlutils
 html5lib
 requests
 numpy
