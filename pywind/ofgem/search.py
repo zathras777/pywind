@@ -30,7 +30,7 @@
 import copy
 from lxml import etree
 
-from lxml.etree import XMLParser
+from lxml.etree import XMLParser, XMLSyntaxError
 
 from pywind.ofgem.form import OfgemForm
 from pywind.ofgem.objects import Station, Certificates
@@ -175,8 +175,13 @@ class CertificateSearch(object):
 
         if not self.form.submit():
             return False
+        
+        try:
+            xml = etree.fromstring(self.form.raw_data)
+        except XMLSyntaxError:
+            print("Invalid XML returned from Ofgem server.")
+            return False
 
-        xml = etree.fromstring(self.form.raw_data)
         for node in xml.xpath('.//a:Detail', namespaces=self.NSMAP):
             cert = Certificates(node)
             self.certificate_records.append(cert)
