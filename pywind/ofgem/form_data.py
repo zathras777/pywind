@@ -503,15 +503,15 @@ class FormData(object):
         if element['tag'] == 'select':
             return sep.join([element['options'][idx] for idx in selected_list(element)])
         components = []
-        for idx in element['value'].split(','):
-            num_idx = int(idx) + 2
-            val_name = element['name'].replace('01$HiddenIndices', "{:02d}".format(num_idx))
-            elem = self.elements.get(val_name, None)
-#            print("      {}".format(elem))
-            if elem is None:
-                self.logger.info("Unable to find a text value for %s -> %s", idx, val_name)
-                continue
-            components.append(elem.get('label', 'unknown'))
+        if ',' in element['value']:
+            for idx in element['value'].strip().split(','):
+                num_idx = int(idx) + 2
+                val_name = element['name'].replace('01$HiddenIndices', "{:02d}".format(num_idx))
+                elem = self.elements.get(val_name, None)
+                if elem is None:
+                    self.logger.info("Unable to find a text value for %s -> %s", idx, val_name)
+                    continue
+                components.append(elem.get('label', 'unknown'))
 #        print("        {}".format(components))
         return sep.join(components)
 
