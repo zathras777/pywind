@@ -332,3 +332,9 @@ class BMUNITSEARCH(ElexonAPI):
 
     def post_item_cleanup(self, item):
         item['category'] = self.CATEGORIES[item['bmunittype']]
+
+
+class UOU2T52W(ElexonAPI):
+    """ National Output Useable by Fuel Type and BM Unit (2-52 Weeks Ahead)"""
+    def __init__(self, apikey=None):
+        super(UOU2T52W, self).__init__(apikey, 'UOU2T52W')

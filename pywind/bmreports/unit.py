@@ -387,7 +387,7 @@ class PowerPackUnits(BaseUnitClass):
     """ Download the latest Power Pack modules spreadsheet and make the
         list of stations available as a list.
     """
-    XLS_URL = 'http://www.bmreports.com/bsp/staticdata/PowerParkModules.xls'
+    XLS_URL = 'http://www.bmreports.com/bsp/staticdata/PowerPackModules.xls'
     SHEET_NAME = "Sheet1"
 
     def _extract_row_data(self, wbb, sht, rownum):

@@ -1,6 +1,8 @@
 from datetime import timedelta, time, datetime, date
 
-from pywind.elexon.api import B1420, B1330, B1320, FUELINST, DERSYSDATA, DERBMDATA, BMUNITSEARCH, B1610, B1630
+from pywind.elexon.api import B1420, B1330, B1320, FUELINST, \
+                              DERSYSDATA, DERBMDATA, BMUNITSEARCH, \
+                              B1610, B1630, UOU2T52W
 from pywind.elexon.unit import BalancingData
 from pywind.utils import StdoutFormatter, args_get_datetime
 
@@ -305,4 +307,16 @@ def elexon_bm_unit(args):
                       "{}, {}".format(item['bmunittype'], item['category']),
                       item['leadpartyname']))
 
+    return api
+
+
+def elexon_uou2t52w(args):
+    """ Generator output for 52 weeks by unit and fueld type """
+    if not check_api_key(args):
+        return None
+
+    api = UOU2T52W(args.apikey)
+    params = {}
+    if not get_check_data(api, params):
+        return None
     return api
