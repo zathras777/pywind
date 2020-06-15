@@ -1,6 +1,6 @@
 """ Information taken from the Elexon API User Guide.
 
-https://www.elexon.co.uk/wp-content/uploads/2016/10/Application-Programming-Interfaces-API-and-Data-Push-user-guide.pdf
+https://www.elexon.co.uk/documents/training-guidance/bsc-guidance-notes/bmrs-api-and-data-push-user-guide-2/
 
 """
 from datetime import datetime
