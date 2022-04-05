@@ -20,7 +20,7 @@ class ElexonAPI(object):
 
     def __init__(self, apikey=None, report=None):
         self.report = report
-        self.version = 'v1'
+        self.version = 'v2'
         self.apikey = apikey
         self.items = []
         self.multi = {}
