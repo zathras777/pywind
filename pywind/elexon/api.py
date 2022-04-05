@@ -3,6 +3,8 @@
 https://www.elexon.co.uk/wp-content/uploads/2016/10/Application-Programming-Interfaces-API-and-Data-Push-user-guide.pdf
 
 """
+from __future__ import print_function
+
 from datetime import datetime
 
 from pywind.utils import get_or_post_a_url, parse_response_as_xml, map_xml_to_dict
@@ -14,7 +16,7 @@ def make_elexon_url(report, version):
 
 class ElexonAPI(object):
     XML_MAPPING = None
-    MULTI_RESULTS = None
+    MULTI_RESULTS = []
 
     def __init__(self, apikey=None, report=None):
         self.report = report
@@ -39,10 +41,12 @@ class ElexonAPI(object):
 
         url = make_elexon_url(self.report, self.version)
         params.update({'APIKey': self.apikey, 'ServiceType': 'xml'})
+#        print(params)
         req = get_or_post_a_url(url, params=params)
 #        print(req.content)
         xml = parse_response_as_xml(req)
         http = xml.xpath('/response/responseMetadata/httpCode')
+#        print(http)
         response_code = int(http[0].text)
         if response_code == 204:
             print("No content returned, but no error reported.")
@@ -53,7 +57,7 @@ class ElexonAPI(object):
             print(err[0].text)
             return False
 
-        if self.MULTI_RESULTS is None:
+        if not self.MULTI_RESULTS:
             for item in xml.xpath('/response/responseBody/responseList/item'):
                 item_dict = map_xml_to_dict(item, self.XML_MAPPING)
 
@@ -306,7 +310,10 @@ class DERBMDATA(ElexonAPI):
 
 
 class BMUNITSEARCH(ElexonAPI):
-    """ Balancing Mechanism Unit Search """
+    """ Balancing Mechanism Unit Search 
+    
+        Nov 2018 - This now appears to not be usable.
+    """
     XML_MAPPING = [
         'recordType',
         'bmUnitID',

@@ -47,7 +47,7 @@ from pywind.utils import get_or_post_a_url
 
 
 def _make_url(url, public=True):
-    OFGEM = 'https://www.renewablesandchp.ofgem.gov.uk'
+    OFGEM = 'https://renewablesandchp.ofgem.gov.uk'
 
     if url.startswith('http'):
         return url
@@ -58,7 +58,6 @@ def _make_url(url, public=True):
     if url.startswith('./'):
         url = url[2:]
     if public is True:
-        OFGEM = 'https://www.renewablesandchp.ofgem.gov.uk'
         return os.path.join(OFGEM, 'Public', url)
     return os.path.join(OFGEM, url)
 
