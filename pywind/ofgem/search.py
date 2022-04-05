@@ -41,8 +41,7 @@ MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 
 class CertificateSearch(object):
     """ Getting information about certificates issued by Ofgem requires accessing their webform.
     This class provides a simple way of doing that.
-    Class that queries ofgem for certificate data. If it succeeds then
-
+    
     There are 2 generator methods that allow iterating through the returned data,
     - each call to :func:`stations()` will return a list of :class:`Certificates` objects related to a single station.
     - each call to :func:`certificates()` will return a single :class:`Certificates` object.
@@ -61,7 +60,6 @@ class CertificateSearch(object):
       4898
 
     """
-
     START_URL = 'ReportViewer.aspx?ReportPath=/DatawarehouseReports/' + \
                 'CertificatesExternalPublicDataWarehouse&ReportVisibility=1&ReportCategory=2'
 
@@ -222,8 +220,8 @@ class CertificateSearch(object):
         for stat in sorted(self.station_records):
             yield self.station_records[stat]
 
-    def parse_filename(self, filename):
-        """Parse an Ofgem generated file of certificates. This parses downloaded Ofgem files.
+    def parse_filename(self, filename:str) -> bool:
+        """Parse an Ofgem generated and downloaded file of certificates.
 
         :param filename: The filename to be parsed
         :returns: True or False
@@ -242,7 +240,7 @@ class CertificateSearch(object):
 
     # Internal functions
 
-    def _set_year(self, year):
+    def _set_year(self, year) -> bool:
         """ Set both the start and finish year for certificates.
 
         :param year: Numeric year to set
@@ -252,7 +250,7 @@ class CertificateSearch(object):
             return False
         return self.set_finish_year(year)
 
-    def _set_month(self, month):
+    def _set_month(self, month) -> bool:
         """ Set both the start and finish months for certificates
 
         :param month: Numeric month number

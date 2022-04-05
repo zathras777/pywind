@@ -29,8 +29,10 @@
     make managing the data easier.
 """
 from __future__ import print_function
+from base64 import decode
 
 import logging
+from urllib.parse import unquote
 import html5lib
 
 import re
@@ -439,7 +441,8 @@ class FormData(object):
             return False
 
         if components[1][0] == 'pageRedirect':
-            self.logger.info("Redirect received. Something went wrong :-(")
+            self.logger.info("Page Redirect received. Something went wrong :-(")
+            self.logger.info("Redirected Page: %s", unquote(components[1][2]))
             return False
 
         self.logger.debug("Processing delta update with %s components", len(components))

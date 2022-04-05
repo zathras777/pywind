@@ -65,6 +65,8 @@ class ElexonAPI(object):
                    item_dict['activeflag'] = item_dict['activeflag'] == 'Y'
                 if 'settlementperiod' in item_dict:
                     item_dict['settlementperiod'] = int(item_dict['settlementperiod'])
+#                if item_dict.get('nominal', None) is None:
+#                    continue
 
                 self.post_item_cleanup(item_dict)
                 self.items.append(item_dict)
@@ -180,8 +182,10 @@ class B1420(ElexonAPI):
         super(B1420, self).__init__(apikey, 'B1420')
 
     def post_item_cleanup(self, item):
-        if 'nominal' in item:
+        if item.get('nominal', None) is not None:
             item['nominal'] = float(item['nominal'])
+        else:
+            item['nominal'] = 0.0
         if 'powersystemresourcetype' in item:
             item['powersystemresourcetype'] = item['powersystemresourcetype'].replace('\"', '')
 #        if 'activeflag' in item:

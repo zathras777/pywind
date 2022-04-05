@@ -47,10 +47,8 @@ from pywind import __version__
 
 
 COMMANDS = [
-    decc_extract,
     ofgem_certificate_search,
     ofgem_station_search,
-    roc_prices,
     elexon_generation_inst,
     elexon_b1320,
     elexon_b1330,
@@ -95,7 +93,7 @@ def main():
         sys.exit(0)
 
     if args.apikey is not None and os.path.exists(args.apikey):
-        print("Reading API Key from {}".format(args.apikey))
+        print("Found an Elexon API Key, reading it from {}".format(args.apikey))
         with open(args.apikey, 'r') as apifh:
             args.apikey = apifh.read().strip()
 

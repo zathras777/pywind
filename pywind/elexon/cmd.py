@@ -44,26 +44,26 @@ def elexon_generation_inst(args):
     if get_check_data(api, params) is False:
         return None
 
-    fmt = StdoutFormatter("10s", "6s", "7s", "7s", "7s", "7s", "7s", "7s", "7s", "7s", "7s", "7s", "7s", "7s", "7s", "7s")
+    fmt = StdoutFormatter("10s", "6s", "7d", "7d", "7d", "7d", "7d", "7d", "7d", "7d", "7d", "7d", "7d", "7d", "7d", "7d")
     print("\n" + fmt.titles('Date', 'Time', 'Period', 'CCGT', 'Oil', 'Coal', 'Nuclear', 'Wind', 'PS', 'NPSHYD', 'OCGT',
                             'Other', 'Int Fr', 'Int Irl', 'Int Ned', 'Int E/W'))
     for item in api.items:
         print(fmt.row(item['date'].strftime("%Y-%m-%d"),
                       item['time'].strftime("%H:%M"),
                       item['settlementperiod'],
-                      item['ccgt'],
-                      item['oil'],
-                      item['coal'],
-                      item['nuclear'],
-                      item['wind'],
-                      item['ps'],
-                      item['npshyd'],
-                      item['ocgt'],
-                      item['other'],
-                      item['intfr'],
-                      item['intirl'],
-                      item['intned'],
-                      item['intew'],
+                      int(item['ccgt']),
+                      int(item['oil']),
+                      int(item['coal']),
+                      int(item['nuclear']),
+                      int(item['wind']),
+                      int(item['ps']),
+                      int(item['npshyd']),
+                      int(item['ocgt']),
+                      int(item['other']),
+                      int(item['intfr']),
+                      int(item['intirl']),
+                      int(item['intned']),
+                      int(item['intew']),
                       ))
     return api
 
@@ -145,7 +145,7 @@ def elexon_b1420(args):
         print("No data returned.")
         return None
 
-    fmt = StdoutFormatter("30s", "8s", "10s", "6s", "10.1f", "20s")
+    fmt = StdoutFormatter("30s", "20s", "10s", "6s", "10.1f", "20s")
     print("\n" + fmt.titles('Resource Name', 'NGC Id', 'BM Unit Id', 'Active', 'Output', 'Type'))
     for item in sorted(api.items, key=lambda xxx: xxx['ngcbmunitid']):
         print(fmt.row(item['registeredresourcename'],
@@ -313,7 +313,7 @@ def elexon_bm_unit(args):
 
 
 def elexon_uou2t52w(args):
-    """ Generator output for 52 weeks by unit and fueld type """
+    """ Generator output for 52 weeks by unit and fuel type """
     if not check_api_key(args):
         return None
 

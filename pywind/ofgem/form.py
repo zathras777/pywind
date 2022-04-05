@@ -82,6 +82,9 @@ class OfgemForm(object):
             self.cookies = {'ASP.NET_SessionId': response.cookies.get('ASP.NET_SessionId')}
 
         response = get_or_post_a_url(self.start_url, cookies=self.cookies)
+        if 'TS01924b6d' in response.cookies:
+            self.cookies['TS01924b6d'] = response.cookies.get('TS01924b6d')
+
         self.form_data = FormData(response.content)
         if self.action_url is None:
             self.action_url = _make_url(self.form_data.action)
@@ -98,16 +101,14 @@ class OfgemForm(object):
         return self.form_data.update(response.content)
 
     def submit(self):
-        """ Submit the form data and update based on response.
-            Given how slow the parsing of a 3M HTML page is, try and use the
-            X-MicrosoftAjax: Delta=true header to get smaller blocks for processing.
-        """
-        is_set, upd = self.form_data.set_value_by_label('Page Size', '25')
+        """ Submit the form data and update based on response. """
+        is_set, _ = self.form_data.set_value_by_label('Page Size', '25')
         if is_set is False:
             return False
         response = self._do_post(True)
         if response is None:
             return False
+
         if self.form_data.update(response.content) is False:
             self.logger.warning("Submit failed :-(")
             return False
@@ -155,10 +156,12 @@ class OfgemForm(object):
                      'User-Agent': 'Mozilla',
                      'X-Requested-With': 'XMLHttpRequest',
                      'X-MicrosoftAjax': 'Delta=true',
-                     'Referer': unquote(action_url)
+                     'Referer': unquote(action_url),
+                     'Host': 'renewablesandchp.ofgem.gov.uk',
+                     'Origin': 'https://renewablesandchp.ofgem.gov.uk'
                      }
         post_dict = self.form_data.as_post_data(submit=submit)
-        post_data = "&".join(["{}={}".format(key, post_dict[key]) for key in post_dict.keys()])
+        post_data = "&".join([f"{key}={val}" for key, val in post_dict.items()])
 
         response = get_or_post_a_url(action_url,
                                      post=True,
