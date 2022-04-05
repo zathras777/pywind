@@ -8,7 +8,7 @@
 .. warning::
   Use of the Elexon API requires registration and use of an API key. Registration is free.
 
-Details of the Elexon API can be found in https://www.elexon.co.uk/wp-content/uploads/2016/10/Application-Programming-Interfaces-API-and-Data-Push-user-guide.pdf
+Details of the Elexon API can be found in https://www.elexon.co.uk/documents/training-guidance/bsc-guidance-notes/bmrs-api-and-data-push-user-guide-2/
 
 
 :mod:`pywind.elexon.api`
