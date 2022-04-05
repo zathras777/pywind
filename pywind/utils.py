@@ -37,6 +37,8 @@ from datetime import datetime, date
 from lxml import etree
 import requests
 
+from .export import EXPORT_CHOICES
+
 
 def get_or_post_a_url(url, post=False, **kwargs):
     """
@@ -84,10 +86,10 @@ def get_or_post_a_url(url, post=False, **kwargs):
         raise Exception("Request was completed, but status code is not 200.\n"+
                         "URL: {}\nStatus Code: {}".format(url, req.status_code))
 
-    if ignore_req_check is False and req.url != url:
-        if 'params' not in kwargs or not req.url.startswith(url):
-            raise Exception("Returned URL was from a different URL than requested.\n" +
-                            "Requested: {}\nActual:  {}".format(url, req.url))
+#    if ignore_req_check is False and req.url != url:
+#        if 'params' not in kwargs or not req.url.startswith(url):
+#            raise Exception("Returned URL was from a different URL than requested.\n" +
+#                            "Requested: {}\nActual:  {}".format(url, req.url))
     return req
 
 
@@ -151,7 +153,7 @@ def commandline_parser(help_text, epilog=None):
     parser.add_argument('--all-periods', action='store_true', help='Get data for all available periods')
     parser.add_argument('--settlement-period', help='Settlement period (1-50)')
     parser.add_argument('--scheme', choices=['REGO', 'RO'], help='Ofgem Scheme')
-    parser.add_argument('--export', choices=['csv', 'xml', 'xlsx'], help='Data Export Format')
+    parser.add_argument('--export', choices=EXPORT_CHOICES, help='Data Export Format')
     parser.add_argument('--output', help='Export filename')
     parser.add_argument('--input', help='Filename to parse')
     parser.add_argument('--save', action='store_true',
@@ -303,7 +305,7 @@ def _convert_type(val, typ):
     elif typ == 'date':
         # Incredibly Ofgem has several places where there are newlines in dates!
         if '\n' in val:
-            val = val.split(b"\n")[0]
+            val = val.split("\n")[0]
         for fmt in ['%d/%m/%Y', '%Y-%m-%d', '%Y-%m-%dT%H:%M:00']:
             try:
                 if sys.version_info >= (3, 0):

@@ -130,7 +130,8 @@ class OfgemForm(object):
         """
         if self.raw_data is None:
             return False
-        etree.write(filename, self.raw_data, encoding='utf-8')
+        with open(filename, "wb") as fh:
+            fh.write(self.raw_data)
         return True
 
     def set_value(self, lbl, value):

@@ -32,25 +32,35 @@
 import csv
 import os
 import sys
+import json
 
 from datetime import date
-from pprint import pprint
 from lxml import etree
 import xlwt
+from typing import Any
+
+
+EXPORT_CHOICES=['csv', 'xml', 'xlsx', 'json']
 
 
 def export_to_file(args, obj):
     """ Export a pywind object to a file based on command line arguments.
-    The object supplied can be exported as CSV, XLSX or XML depending on the args.format
+    The object supplied can be exported as CSV, JSON, XLSX or XML depending on the args.format
     option supplied.
 
     :param args: Command line args from :func:`argparse.parse_args`
     :param obj: The pywind object to export.
     """
-    fmt = (args.export or 'xml').lower()
-    if fmt.lower() not in ['xml', 'csv', 'xlsx']:
-        print("Format must be xml, xlsx or csv, not {}".format(fmt))
+    fmt = (args.export or 'json').lower()
+    if fmt.lower() not in EXPORT_CHOICES:
+        print("Format must be one of {} - not {}".format(", ".join(EXPORT_CHOICES), fmt))
         sys.exit(0)
+
+    export_fn = '_export_{}'.format(fmt)
+    if export_fn not in globals():
+        print("Unable to export to format {}".format(fmt))
+        return False
+
     if args.output is None:
         fnn = obj.__class__.__name__
         fnn = fnn.lower() + '.' + fmt
@@ -66,16 +76,15 @@ def export_to_file(args, obj):
             extra += 1
         fnn = ck_fn
 
+    if globals()[export_fn](obj, fnn) is False:
+        print("There was an error exporting the data.")
+        if args.output is None or args.output not in fnn:
+            os.unlink(fnn)
+        return False
+
     if args.output is None or args.output not in fnn:
         print("Output will be saved in {}".format(fnn))
 
-    export_fn = '_export_{}'.format(fmt)
-    if export_fn not in globals():
-        print("Unable to export to format {}".format(fmt))
-        sys.exit(0)
-    if globals()[export_fn](obj, fnn) is False:
-        print("There was an error writing the file '{}'.".format(fnn))
-        return False
     print("{} export to {} completed".format(fmt.upper(), fnn))
     return True
 
@@ -86,10 +95,7 @@ def _make_xml_string(val):
     if isinstance(val, date):
         return val.strftime("%Y-%m-%d")
     val = val.replace('(', '').replace(')', '').replace('/', '_')
-
-    if sys.version_info >= (3, 0):
-        return val
-    return val.decode('utf-8')
+    return val
 
 
 def _export_xml(obj, filename):
@@ -204,3 +210,13 @@ def _export_xlsx(obj, filename):
             sht[1] += 1
 
     wbb.save(filename)
+
+
+def _export_json(obj:Any, filename:str) -> bool:
+    """ Export as JSON. """
+    if not hasattr(obj, "to_dict"):
+        print(f"{obj.__class__.__name__} does not have a to_dict function so cannot be exported to json")
+        return False
+    with open(filename, 'wt') as jfile:
+        json.dump(obj.to_dict(), jfile)
+    return True

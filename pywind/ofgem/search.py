@@ -382,3 +382,7 @@ class StationSearch(object):
         """
         for station in self.stations:
             yield {'Station': station.as_row()}
+
+    def to_dict(self) -> dict:
+        """ Create a dict of the results."""
+        return {'Stations': [station.as_json_dict() for station in self.stations]}

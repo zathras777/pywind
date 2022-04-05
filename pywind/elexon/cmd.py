@@ -9,9 +9,11 @@ from pywind.utils import StdoutFormatter, args_get_datetime
 
 def check_api_key(args):
     if args.apikey is None:
-        print("You MUST supply an API key to access Elexon data.")
-        print("Registration is free, but you need to go to the URL below and register.")
-        print("https://www.elexonportal.co.uk/registration/newuser")
+        print("""You MUST supply an API key to access Elexon data.
+ 
+    Registration is free, but you need to go to the URL below and register.")
+    https://www.elexonportal.co.uk/registration/newuser
+""")
         return False
     return True
 

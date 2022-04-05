@@ -25,8 +25,7 @@
 #
 # For more information, please refer to <http://unlicense.org/>
 
-from datetime import datetime
-from pprint import pprint
+import datetime
 
 from pywind.utils import map_xml_to_dict
 
@@ -42,21 +41,32 @@ class OfgemObjectBase(object):
             raise NotImplementedError("Child classes should define their XML_MAPPING")
 
         self.attrs = map_xml_to_dict(node, self.XML_MAPPING)
-#        pprint(self.attrs)
 
     def __getattr__(self, item):
         if item in self.attrs:
             return self.attrs[item]
         raise AttributeError(item)
 
-    def as_row(self):
+    def as_row(self) -> dict:
         """
         Return the information in correct format for :func:`rows()` usage
 
         :returns: Formatted attribute dict
         :rtype: dict
         """
-        return {'@{}'.format(key): self.attrs[key] for key in self.attrs.keys()}
+        return {f"{key}": self.attrs[key] for key in self.attrs.keys()}
+
+    def as_json_dict(self) -> dict:
+        """ Return a dict with suitable conversions for JSON usage. """
+        row = {}
+        for key, val in self.attrs.items():
+            if val is None:
+                val = ""
+            if isinstance(val, datetime.date):
+                val = val.strftime("%Y-%m-%d")
+            row[key] = val
+        return row
+#        return {f"{key}": self.attrs[key] for key in self.attrs.keys() if self.attrs[key] is not None}
 
 
 class Certificates(OfgemObjectBase):
@@ -88,7 +98,7 @@ class Certificates(OfgemObjectBase):
         OfgemObjectBase.__init__(self, node)
 
         if self.attrs['period'].startswith("01"):
-            dt = datetime.strptime(self.attrs['period'][:10], '%d/%m/%Y')
+            dt = datetime.datetime.strptime(self.attrs['period'][:10], '%d/%m/%Y')
             self.attrs['period'] = dt.strftime("%b-%Y")
 
     def __str__(self):

@@ -53,6 +53,9 @@ class BalancingData(object):
         self.units = {}
 
     def get_data(self, **params):
+        if 'Period' in params:
+            print("Period is an incorrect parameter, use SettlementPeriod.")
+
         if self.api.get_data(**params) is False:
             return False
 

@@ -76,8 +76,6 @@ def ofgem_station_search(args):
         sys.exit(0)
 
     print("Total of {} station records returned.".format(len(oss)))
-    # todo - add output
-
     return oss
 
 
