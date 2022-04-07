@@ -317,7 +317,7 @@ class FormData(object):
                 if elm.get('checked', '') != 'checked':
                     continue
             self._add_element(None, **inp_data)
-            self.logger.debug("  - adding %s", inp_data['name'])
+            self.logger.debug("  - adding %s : value %s", inp_data['name'], inp_data["value"])
 
     def _process_cbnull(self):
         for key in self.elements.keys():
@@ -488,11 +488,9 @@ class FormData(object):
             choices to build the required text. This could be a select element or one of the
             more complex multiple choice checkbox fields.
         """
-#        print("_get_related_txt_element - {}".format(name))
         for poss in ['ddValue', 'cbNull', 'divDropDown$ctl01$HiddenIndices']:
             related = name.replace('txtValue', poss)
             rel_el = self.elements.get(related, None)
-#            print("    {} => {}".format(related, rel_el))
             if rel_el is not None:
                 return rel_el
         return None
@@ -500,21 +498,25 @@ class FormData(object):
     def _build_text_value(self, element, original):
         if 'cbNull' in element['name']:
             if element['checked']:
+                self.logger.debug(" checked: ''")
                 return ''
+            self.logger.debug(" value: %s", original['value'])
             return original['value']
         sep = self.seperators.get(original['name'], ',')
         if element['tag'] == 'select':
-            return sep.join([element['options'][idx] for idx in selected_list(element)])
+            val = sep.join([element['options'][idx] for idx in selected_list(element)])
+            self.logger.debug(" value: %s", val)
+            return val
+
         components = []
-        if ',' in element['value']:
-            for idx in element['value'].strip().split(','):
-                num_idx = int(idx) + 2
-                val_name = element['name'].replace('01$HiddenIndices', "{:02d}".format(num_idx))
-                elem = self.elements.get(val_name, None)
-                if elem is None:
-                    self.logger.info("Unable to find a text value for %s -> %s", idx, val_name)
-                    continue
-                components.append(elem.get('label', 'unknown'))
-#        print("        {}".format(components))
+        for idx in element['value'].strip().split(','):
+            num_idx = int(idx) + 2
+            val_name = element['name'].replace('01$HiddenIndices', "{:02d}".format(num_idx))
+            elem = self.elements.get(val_name, None)
+            if elem is None:
+                self.logger.info("Unable to find a text value for %s -> %s", idx, val_name)
+                continue
+            components.append(elem.get('label', 'unknown'))
+        self.logger.debug(" value: %s", sep.join(components))
         return sep.join(components)
 

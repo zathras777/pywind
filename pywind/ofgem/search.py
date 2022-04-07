@@ -149,6 +149,7 @@ class CertificateSearch(object):
         :param what: Scheme abbreviation [REGO, RO]
         :rtype: bool
         """
+
         return self.form.set_value('scheme', what.upper())
 
     def filter_generator_id(self, acc_no):
@@ -171,7 +172,7 @@ class CertificateSearch(object):
         self.certificate_records = []
         self.station_records = {}
 
-        if not self.form.submit():
+        if not self.form.submit(script="ScriptManager1|ReportViewer$ctl09$Reserved_AsyncLoadTarget"):
             return False
         
         try:

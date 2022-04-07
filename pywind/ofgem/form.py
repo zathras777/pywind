@@ -100,11 +100,18 @@ class OfgemForm(object):
             return False
         return self.form_data.update(response.content)
 
-    def submit(self):
+    def submit(self, script:str=""):
         """ Submit the form data and update based on response. """
         is_set, _ = self.form_data.set_value_by_label('Page Size', '25')
         if is_set is False:
             return False
+
+        if script != "":
+            self.form_data["ScriptManager1"] = script
+        self.form_data["ReportViewer$ctl10"] = "ltr"
+        self.form_data["ReportViewer$ctl11"] = "standards"
+        self.form_data["__EVENTTARGET"] = "ReportViewer$ctl09$Reserved_AsyncLoadTarget"
+
         response = self._do_post(True)
         if response is None:
             return False
