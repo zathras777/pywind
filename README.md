@@ -8,8 +8,15 @@ to access online information related to Renewable Energy in the UK.
 
 Following an extensive rewrite in Aug 2016 documentation is now available at [http://pywind.readthedocs.io/en/latest/]
 
-April 2022 Update
------------------
+7th April 2022 Update
+---------------------
+
+Ofgem Certificates can be retrieved but the scheme cannot be set or it will fail :-(
+
+The period can be set and works as expected. I will try to debug this further over the next week or so. I have fixed a few minor issues and the XML export works again.
+
+5th April 2022 Update
+---------------------
 
 This project isn't dead, just resting :-)
 
