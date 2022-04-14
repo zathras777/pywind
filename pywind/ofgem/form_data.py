@@ -47,8 +47,7 @@ def element_attributes(elm):
             'type': elm.get('type'),
             'name': elm.get('name'),
             'value': elm.get('value', ''),
-            'readonly': elm.get('readonly', False),
-            'disabled': elm.get('disabled', False)}
+            'checked': elm.get('checked', '') == "checked"}
 
 
 def selected_list(element):
@@ -311,10 +310,7 @@ class FormData(object):
             inp_data = element_attributes(elm)
             if inp_data['type'] in [None, 'image']:
                 continue
-            if 'cbNull' in inp_data['name']:
-                inp_data['checked'] = elm.get('checked', '') == 'checked'
-            if inp_data['type'] == 'radio':
-                if elm.get('checked', '') != 'checked':
+            if inp_data['type'] == 'radio' and inp_data['checked'] is False:
                     continue
             self._add_element(None, **inp_data)
             self.logger.debug("  - adding %s : value %s", inp_data['name'], inp_data["value"])
@@ -478,7 +474,7 @@ class FormData(object):
         if 'ddValue' in name:
             return ",".join([str(idx) for idx in element['selected']])
         if 'cbNull' in name:
-            return 'on' if element['checked'] else ''
+            return 'on' if element['checked'] else 'off'
         if 'HiddenIndices' in name:
             return element['value']
         return element['value']
